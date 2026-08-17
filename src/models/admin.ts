@@ -29,6 +29,5 @@ const adminSchema = new Schema<IAdmin>(
   { timestamps: true, versionKey: false }
 );
 
-adminSchema.index({ email: 1 }, { unique: true });
 
 export default mongoose.model<IAdmin>("admin", adminSchema);

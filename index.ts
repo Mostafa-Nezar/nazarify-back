@@ -4,6 +4,15 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
 import userauth from "./src/routes/user/auth";
+import service from "./src/routes/service";
+import user from "./src/routes/user/user";
+import project from "./src/routes/project";
+import swaggerUi from "swagger-ui-express";
+import fs from "fs";
+import path from "path";
+
+const swaggerDocument = JSON.parse(fs.readFileSync(path.resolve(__dirname, './swagger-output.json'), 'utf8'));
+
 
 const app = express();
 
@@ -16,11 +25,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.use("/user", userauth);
+app.use("/", userauth);
+app.use("/user", user);
+app.use("/service", service);
+app.use("/project", project);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
-app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Nazarify API is running" });
-});
+app.get("/", (req: Request, res: Response) => res.json({ message: "Nazarify API is running" }));
 
 const PORT = process.env.PORT || 3001;
 
@@ -37,3 +48,4 @@ mongoose
     console.error("MongoDB connection error:", error);
     process.exit(1);
   });
+  
