@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User from "../../models/user";
+import NotificationService from "../../utils/notificationService";
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -44,6 +45,9 @@ export const register = async (req: Request, res: Response) => {
       email: normalizedEmail,
       password: await bcrypt.hash(password, 12),
     });
+
+    await NotificationService.notifyWelcome(user._id.toString(), user.name);
+
     const token = createToken(user._id.toString());
     setcookie(res, token);
     return res.status(201).json({ user, token, message: "Registration successful" });
@@ -82,10 +86,7 @@ export const login = async (req: Request, res: Response) => {
 
     setcookie(res, createToken(user._id.toString()));
 
-    return res.status(200).json({
-      message: "Login successful",
-      user,
-    });
+    return res.status(200).json({ user, message: "Login successful" });
   } catch (error) {
     console.error("Login error:", error);
     return res.status(500).json({ message: "Internal server error" });
@@ -96,13 +97,12 @@ export const googleLogin = async (req: Request, res: Response) => {
   try {
     const { name, email, avatar } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ message: "Google email is required" });
-    }
+    if (!email) return res.status(400).json({ message: "Google email is required" });
 
     const normalizedEmail = email.trim().toLowerCase();
 
     let user = await User.findOne({ email: normalizedEmail });
+    let isNewUser = false;
 
     if (!user) {
       user = await User.create({
@@ -111,11 +111,9 @@ export const googleLogin = async (req: Request, res: Response) => {
         avatar: avatar?.trim(),
         isEmailVerified: true,
       });
+      isNewUser = true;
     } else {
-      if (!user.isActive) {
-        return res.status(403).json({ message: "Account is disabled" });
-      }
-
+      if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
       if (avatar && !user.avatar) user.avatar = avatar.trim();
 
       user.isEmailVerified = true;
@@ -125,6 +123,10 @@ export const googleLogin = async (req: Request, res: Response) => {
     }
 
     setcookie(res, createToken(user._id.toString()));
+
+    if (isNewUser) {
+      await NotificationService.notifyWelcome(user._id.toString(), user.name);
+    }
 
     return res.status(200).json({ message: "Google login successful", user });
   } catch (error) {

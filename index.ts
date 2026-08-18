@@ -9,6 +9,7 @@ import user from "./src/routes/user/user";
 import project from "./src/routes/project";
 import tool from "./src/routes/tool";
 import skill from "./src/routes/skill";
+import serviceRequest from "./src/routes/service-requests";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -33,6 +34,8 @@ app.use("/service", service);
 app.use("/project", project);
 app.use("/tool", tool);
 app.use("/skill", skill);
+app.use("/service-request", serviceRequest);
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.get("/", (req: Request, res: Response) => res.json({ message: "Nazarify API is running" }));

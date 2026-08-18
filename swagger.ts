@@ -13,6 +13,9 @@ const doc = {
     { name: 'User', description: 'User operations' },
     { name: 'Service', description: 'Service management' },
     { name: 'Project', description: 'Project management' },
+    { name: 'Tool', description: 'Tool management' },
+    { name: 'Skill', description: 'Skill management' },
+    { name: 'Service Request', description: 'Service Request management' },
   ],
 };
 
@@ -32,10 +35,13 @@ swaggerAutogen()(outputFile, routes, doc).then(() => {
     const segment = path.split('/')[1]; // Extracts "auth" from "/auth/..."
     
     let tag = 'General';
-    if (segment === 'auth') tag = 'Auth';
+    if (['register', 'login', 'google', 'logout'].includes(segment)) tag = 'Auth';
     else if (segment === 'user') tag = 'User';
     else if (segment === 'service') tag = 'Service';
     else if (segment === 'project') tag = 'Project';
+    else if (segment === 'tool') tag = 'Tool';
+    else if (segment === 'skill') tag = 'Skill';
+    else if (segment === 'service-request') tag = 'Service Request';
 
     for (const method in methods) {
       methods[method].tags = [tag];

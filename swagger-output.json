@@ -23,6 +23,18 @@
     {
       "name": "Project",
       "description": "Project management"
+    },
+    {
+      "name": "Tool",
+      "description": "Tool management"
+    },
+    {
+      "name": "Skill",
+      "description": "Skill management"
+    },
+    {
+      "name": "Service Request",
+      "description": "Service Request management"
     }
   ],
   "schemes": [
@@ -80,7 +92,7 @@
           }
         },
         "tags": [
-          "General"
+          "Auth"
         ]
       }
     },
@@ -122,7 +134,7 @@
           }
         },
         "tags": [
-          "General"
+          "Auth"
         ]
       }
     },
@@ -164,7 +176,7 @@
           }
         },
         "tags": [
-          "General"
+          "Auth"
         ]
       }
     },
@@ -177,7 +189,7 @@
           }
         },
         "tags": [
-          "General"
+          "Auth"
         ]
       }
     },
@@ -863,7 +875,7 @@
           }
         },
         "tags": [
-          "General"
+          "Tool"
         ]
       },
       "post": {
@@ -914,7 +926,7 @@
           }
         },
         "tags": [
-          "General"
+          "Tool"
         ]
       }
     },
@@ -941,7 +953,7 @@
           }
         },
         "tags": [
-          "General"
+          "Tool"
         ]
       },
       "patch": {
@@ -992,7 +1004,7 @@
           }
         },
         "tags": [
-          "General"
+          "Tool"
         ]
       },
       "delete": {
@@ -1028,7 +1040,7 @@
           }
         },
         "tags": [
-          "General"
+          "Tool"
         ]
       }
     },
@@ -1066,7 +1078,7 @@
           }
         },
         "tags": [
-          "General"
+          "Tool"
         ]
       }
     },
@@ -1104,7 +1116,7 @@
           }
         },
         "tags": [
-          "General"
+          "Tool"
         ]
       }
     },
@@ -1162,7 +1174,7 @@
           }
         },
         "tags": [
-          "General"
+          "Skill"
         ]
       },
       "post": {
@@ -1210,7 +1222,7 @@
           }
         },
         "tags": [
-          "General"
+          "Skill"
         ]
       }
     },
@@ -1237,7 +1249,7 @@
           }
         },
         "tags": [
-          "General"
+          "Skill"
         ]
       },
       "patch": {
@@ -1288,7 +1300,7 @@
           }
         },
         "tags": [
-          "General"
+          "Skill"
         ]
       },
       "delete": {
@@ -1324,7 +1336,7 @@
           }
         },
         "tags": [
-          "General"
+          "Skill"
         ]
       }
     },
@@ -1362,7 +1374,7 @@
           }
         },
         "tags": [
-          "General"
+          "Skill"
         ]
       }
     },
@@ -1400,7 +1412,326 @@
           }
         },
         "tags": [
-          "General"
+          "Skill"
+        ]
+      }
+    },
+    "/service-request/": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "service": {
+                  "example": "any"
+                },
+                "title": {
+                  "example": "any"
+                },
+                "message": {
+                  "example": "any"
+                },
+                "budget": {
+                  "example": "any"
+                },
+                "deadline": {
+                  "example": "any"
+                },
+                "attachments": {
+                  "example": "any"
+                },
+                "contact": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "Service Request"
+        ]
+      },
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "Service Request"
+        ]
+      }
+    },
+    "/service-request/{id}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "Service Request"
+        ]
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "Service Request"
+        ]
+      }
+    },
+    "/service-request/{id}/cancel": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "Service Request"
+        ]
+      }
+    },
+    "/service-request/{id}/update": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "Service Request"
+        ]
+      }
+    },
+    "/service-request/{id}/rate": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "rating": {
+                  "example": "any"
+                },
+                "review": {
+                  "example": "any"
+                }
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "tags": [
+          "Service Request"
         ]
       }
     }
