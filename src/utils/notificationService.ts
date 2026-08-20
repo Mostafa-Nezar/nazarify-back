@@ -4,10 +4,7 @@ import { Types } from "mongoose";
 
 class NotificationService {
   static io: any = null;
-
-  static setSocketIO(socketIO: any) {
-    this.io = socketIO;
-  }
+  static setSocketIO(socketIO: any) { this.io = socketIO; }
 
   static async createNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string = "system", recipientType: "user" | "admin" = "user", icon?: string) {
     try {
@@ -17,9 +14,7 @@ class NotificationService {
       if (this.io) {
         this.io.to(`user_${recipientId.toString()}`).emit("newNotification", { 
           _id: notification._id, title: notification.title, message: notification.message, type: notification.type,
-          icon: notification.icon,
-          isRead: notification.isRead,
-          createdAt: notification.createdAt,
+          icon: notification.icon, isRead: notification.isRead, createdAt: notification.createdAt,
         });
       }
 
@@ -42,21 +37,13 @@ class NotificationService {
     return await this.createNotification(userId, title, message, "request", "user", "design_services");
   }
 
-  static async notifyProjectStatusUpdate(
-    userId: string | Types.ObjectId,
-    projectName: string,
-    status: string
-  ) {
+  static async notifyProjectStatusUpdate(userId: string | Types.ObjectId,projectName: string,status: string) {
     const title = "Project Status Updated";
     const message = `The status of your project "${projectName}" has been updated to: ${status}.`;
     return await this.createNotification(userId, title, message, "project", "user", "update");
   }
 
-  static async notifyPaymentReceived(
-    userId: string | Types.ObjectId,
-    projectName: string,
-    amount: number | string
-  ) {
+  static async notifyPaymentReceived(userId: string | Types.ObjectId,projectName: string,amount: number | string) {
     const title = "Payment Received";
     const message = `We have successfully received your payment of $${amount} for the project "${projectName}". Thank you!`;
     return await this.createNotification(userId, title, message, "success", "user", "payments");
