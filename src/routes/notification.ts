@@ -1,4 +1,3 @@
-// src/routes/notifications.ts
 import { Router } from "express";
 import { getNotifications, getNotification, markAsRead, markAllAsRead, archiveNotification, deleteNotification, createNotification, } from "../controllers/notification";
 import { protectUser } from "../middleware/auth";

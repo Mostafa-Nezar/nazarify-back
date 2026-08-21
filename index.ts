@@ -10,6 +10,7 @@ import project from "./src/routes/project";
 import tool from "./src/routes/tool";
 import skill from "./src/routes/skill";
 import serviceRequest from "./src/routes/service-requests";
+import notification from "./src/routes/notification";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -35,6 +36,7 @@ app.use("/project", project);
 app.use("/tool", tool);
 app.use("/skill", skill);
 app.use("/service-request", serviceRequest);
+app.use("/notifications", notification);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
