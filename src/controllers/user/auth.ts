@@ -82,6 +82,124 @@ export const googleLogin = async (req: Request, res: Response) => {
   }
 };
 
+export const githubLogin = async (_req: Request, res: Response) => {
+  const params = new URLSearchParams({client_id: process.env.GITHUB_CLIENT_ID!,
+    redirect_uri: process.env.GITHUB_CALLBACK_URL!, scope: "read:user user:email",
+  });
+
+  res.redirect(`https://github.com/login/oauth/authorize?${params}`);
+};
+
+export const githubCallback = async (req: Request, res: Response) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ message: "GitHub code is required" });
+    const tokenResponse = await fetch("https://github.com/login/oauth/access_token",
+      { method: "POST", headers: { Accept: "application/json" },
+        body: new URLSearchParams({ client_id: process.env.GITHUB_CLIENT_ID!, client_secret: process.env.GITHUB_CLIENT_SECRET!, code: code as string }),
+      }
+    );
+    const { access_token } = await tokenResponse.json();
+
+    if (!access_token) return res.status(401).json({ message: "GitHub authentication failed" });
+    const githubResponse = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${access_token}`, Accept: "application/vnd.github+json", "User-Agent": "Nazarify" },
+    });
+    const githubUser = await githubResponse.json();
+    const emailsResponse = await fetch("https://api.github.com/user/emails", {headers: { Authorization: `Bearer ${access_token}`, Accept: "application/vnd.github+json", "User-Agent": "Nazarify"}});
+    const emails = await emailsResponse.json();
+    const email = emails.find((e: any) => e.primary && e.verified)?.email || emails.find((e: any) => e.verified)?.email;
+    if (!email) return res.status(400).json({message: "No verified GitHub email found"});
+    let user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      user = await User.create({  
+        name: githubUser.name || githubUser.login,
+        email: email.toLowerCase(),
+        username: githubUser.login,
+        avatar: githubUser.avatar_url,
+        isEmailVerified: true,
+        lastLoginAt: new Date(),
+      });
+
+      await NotificationService.notifyWelcome( user._id.toString(), user.name);
+    } else {
+      if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
+
+      user.avatar = githubUser.avatar_url || user.avatar;
+      user.isEmailVerified = true;
+      user.lastLoginAt = new Date();
+      await user.save();
+    }
+
+    const token = createToken(user._id.toString());
+    setcookie(res, token);
+
+    return res.redirect(`http://localhost:5000/auth.html?token=${encodeURIComponent(token)}`);
+  } catch (error) {
+    console.error("GitHub login error:", error);
+    return res.status(500).json({ message: "server error" });
+  }
+};
+
+export const githubLogin2 = async (req: Request, res: Response) => {
+  const { platform } = req.query;
+  const params = new URLSearchParams({ client_id: process.env.GITHUB_CLIENT_ID!,redirect_uri: process.env.GITHUB_CALLBACK_URL2!,scope: "read:user user:email",state: platform === 'web' ? 'web' : 'mobile', });
+  res.redirect(`https://github.com/login/oauth/authorize?${params}`);
+};
+
+export const githubCallback2 = async (req: Request, res: Response) => {
+  try {
+    const { code, state } = req.query;
+    if (!code) return res.status(400).json({ message: "GitHub code is required" });
+    const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {method: "POST",headers: { Accept: "application/json" },
+        body: new URLSearchParams({
+          client_id: process.env.GITHUB_CLIENT_ID!,
+          client_secret: process.env.GITHUB_CLIENT_SECRET!,
+          code: code as string,
+        }),
+      }
+    );
+
+    const { access_token } = await tokenResponse.json();
+    if (!access_token) return res.status(401).json({message: "GitHub authentication failed",});
+    const headers = {Authorization: `Bearer ${access_token}`,Accept: "application/vnd.github+json", "User-Agent": "Nazarify"};
+    const githubUser = await (await fetch("https://api.github.com/user", { headers })).json();
+    const emails = await (await fetch("https://api.github.com/user/emails", { headers })).json();
+    const email = emails.find((e: any) => e.primary && e.verified)?.email || emails.find((e: any) => e.verified)?.email;
+
+    if (!email) return res.status(400).json({message: "No verified GitHub email found"});
+
+    let user = await User.findOne({email: email.toLowerCase()});
+    if (!user) {
+      user = await User.create({
+        name: githubUser.name || githubUser.login,
+        email: email.toLowerCase(),
+        username: githubUser.login,
+        avatar: githubUser.avatar_url,
+        isEmailVerified: true,
+        lastLoginAt: new Date(),
+      });
+      await NotificationService.notifyWelcome(user._id.toString(), user.name);
+    } else {
+      if (!user.isActive) return res.status(403).json({message: "Account is disabled"});
+      user.avatar = githubUser.avatar_url || user.avatar;
+      user.isEmailVerified = true;
+      user.lastLoginAt = new Date();
+      await user.save();
+    }
+
+    const token = createToken(user._id.toString());
+    setcookie(res, token);
+    if (state === 'web') {
+      return res.redirect(`http://localhost:5000/auth.html?token=${encodeURIComponent(token)}`);
+    } else {
+      return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}`);
+    }
+  } catch (error) {
+    console.error("GitHub login 2 error:", error);
+    return res.status(500).json({ message: "server error" });
+  }
+};
 export const logout = async (_req: Request, res: Response) => {
   clearcookie(res);
   return res.status(200).json({ message: "Logout successful" });

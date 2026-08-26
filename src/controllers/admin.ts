@@ -26,6 +26,7 @@ export const register = async (req: Request, res: Response) => {
 
     const token = createToken(admin._id.toString(), admin.role);
     setcookie(res, token);
+    res.setHeader("Authorization", `Bearer ${token}`);
     return res.status(201).json({ admin, token, message: "Registration successful" });
   } catch (error) {
     console.error("Register error:", error);
@@ -47,6 +48,7 @@ export const login = async (req: Request, res: Response) => {
 
     const token = createToken(admin._id.toString(), admin.role);
     setcookie(res, token);
+    res.setHeader("Authorization", `Bearer ${token}`);
 
     return res.status(200).json({ admin, token, message: "Login successful" });
   } catch (error) {
