@@ -11,7 +11,8 @@ import tool from "./src/routes/tool";
 import skill from "./src/routes/skill";
 import serviceRequest from "./src/routes/service-requests";
 import notification from "./src/routes/notification";
-import adminAuth from "./src/routes/admin";
+import adminAuth from "./src/routes/admin/auth";
+import admin from "./src/routes/admin/admin";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -39,6 +40,7 @@ app.use("/skill", skill);
 app.use("/service-request", serviceRequest);
 app.use("/notifications", notification);
 app.use("/admin", adminAuth);
+app.use("/admin", admin);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
@@ -59,4 +61,3 @@ mongoose
     console.error("MongoDB connection error:", error);
     process.exit(1);
   });
-  

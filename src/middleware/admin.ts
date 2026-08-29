@@ -4,20 +4,19 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.JWT_SECRET!;
 
 interface JwtPayload { sub: string; role: "admin"; jti: string; iat: number; exp: number; }
-export interface Admin extends Request { user?: JwtPayload; }
 
-export const protectAdmin = (req: Admin, res: Response, next: NextFunction) => {
-  const token =
-    req.cookies?.token || req.headers.authorization?.startsWith("Bearer ")
-      ? req.cookies?.token || req.headers.authorization!.split(" ")[1] : null;
+export const protectAdmin = (req: Request, res: Response, next: NextFunction) => {
+  const token = req.cookies?.admin_token || (req.headers.authorization?.startsWith("Bearer ")
+    ? req.headers.authorization.split(" ")[1]
+    : null);
 
   if (!token) return res.status(401).json({ message: "Authentication required" })
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    if (decoded.role !== "admin") return res.status(403).json({ message: "Access denied" })
+    if (decoded.role !== "admin") return res.status(403).json({ message: "Access denied" });
 
-    req.user = decoded;
+    (req as Request & { user?: JwtPayload }).user = decoded;
 
     next();
   } catch {

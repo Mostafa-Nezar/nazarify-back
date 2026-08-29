@@ -3,7 +3,9 @@ import mongoose, { Document, Schema } from "mongoose";
 export interface IAdmin extends Document {
   name: string;
   email: string;
-  password: string;
+  password?: string;
+  googleId?: string;
+  githubId?: string;
   role: "super_admin" | "admin";
   permissions: string[];
   avatar?: string;
@@ -18,7 +20,9 @@ const adminSchema = new Schema<IAdmin>(
   {
     name: { type: String, required: true, trim: true, minlength: 2, maxlength: 100 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
-    password: { type: String, required: true, select: false },
+    password: { type: String, select: false },
+    googleId: { type: String, unique: true, sparse: true, index: true },
+    githubId: { type: String, unique: true, sparse: true, index: true },
     role: { type: String, enum: ["super_admin", "admin"], default: "admin", index: true },
     permissions: { type: [String], default: [] },
     avatar: { type: String, trim: true },

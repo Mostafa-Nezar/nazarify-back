@@ -4,9 +4,8 @@ import jwt from "jsonwebtoken";
 const JWT_SECRET = process.env.JWT_SECRET!;
 
 interface JwtPayload { sub: string; role: "user"; jti: string; iat: number; exp: number; }
-export interface User extends Request { user?: JwtPayload; }
 
-export const protectUser = (req: User, res: Response, next: NextFunction) => {
+export const protectUser = (req: Request, res: Response, next: NextFunction) => {
   const token =
     req.cookies?.token || req.headers.authorization?.startsWith("Bearer ")
       ? req.cookies?.token || req.headers.authorization!.split(" ")[1] : null;
@@ -15,9 +14,9 @@ export const protectUser = (req: User, res: Response, next: NextFunction) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    if (decoded.role !== "user") return res.status(403).json({ message: "Access denied" })
+    if (decoded.role !== "user") return res.status(403).json({ message: "Access denied" });
 
-    req.user = decoded;
+    (req as Request & { user?: JwtPayload }).user = decoded;
 
     next();
   } catch {

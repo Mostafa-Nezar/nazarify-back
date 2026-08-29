@@ -2,21 +2,16 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import User from "../../models/user";
+import User, { IUser } from "../../models/user";
 import NotificationService from "../../utils/notificationService";
+import { OAuth2Client } from "google-auth-library";
 
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET!;
 const createToken = (userId: string) => jwt.sign({ sub: userId, role: "user", jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: "7d" });
-const setcookie = (res: Response, token: string) => {
-  res.cookie("token", token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-};
-
+const setcookie = (res: Response, token: string) => { res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", maxAge: 7 * 24 * 60 * 60 * 1000 }) };
 const clearcookie = (res: Response) => { res.clearCookie("token", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: process.env.NODE_ENV === "production" ? "none" : "lax" }) };
+const populateNotifications = async (user: IUser) => user.populate("notifications");
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -25,6 +20,7 @@ export const register = async (req: Request, res: Response) => {
     if (await User.findOne({ email })) return res.status(409).json({ message: "Email already registered" });
     const user = await User.create({ name: name.trim(), email, password: await bcrypt.hash(password, 12) });
     await NotificationService.notifyWelcome(user._id.toString(), user.name);
+    await populateNotifications(user);
 
     const token = createToken(user._id.toString());
     setcookie(res, token);
@@ -39,7 +35,9 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
-    const user = await User.findOne({ email: email.trim().toLowerCase() }).select("+password");
+    const user = await User.findOne({ email: email.trim().toLowerCase() })
+      .select("+password")
+      .populate("notifications");
     if (!user || !user.password) return res.status(401).json({ message: "Invalid email or password" });
     if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
     if (!(await bcrypt.compare(password, user.password))) return res.status(401).json({ message: "Invalid email or password" });
@@ -57,25 +55,111 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const googleLogin = async (req: Request, res: Response) => {
+export const googleSignIn = async (req: Request, res: Response) => {
   try {
-    const { name, email, avatar } = req.body;
-    if (!email) return res.status(400).json({ message: "Google email is required" });
-    let user = await User.findOne({ email });
-    let isNewUser = false;
+    const { token } = req.body;
+    const ticket = await client.verifyIdToken({ idToken: token, audience: process.env.GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    if (!payload?.email || !payload?.sub) return res.status(400).json({ message: "Invalid Google token" });
+    const { email, name, picture, sub: googleId } = payload;
+
+    let user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) user = await User.findOne({ googleId });
 
     if (!user) {
-      user = await User.create({ name: name?.trim() || "Google User", email, avatar: avatar?.trim(), isEmailVerified: true });
-      isNewUser = true;
+      user = new User({
+        name: name || "Google User",
+        email: email.toLowerCase(),
+        googleId,
+        avatar: picture,
+        isEmailVerified: true,
+        lastLoginAt: new Date(),
+      });
+
+      await user.save();
+      await NotificationService.notifyWelcome(user._id.toString(), user.name);
     } else {
       if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
-      if (avatar && !user.avatar) user.avatar = avatar.trim();
-      user.isEmailVerified = true; user.lastLoginAt = new Date();
+
+      user.googleId = googleId;
+      user.lastLoginAt = new Date();
+      if (picture) user.avatar = picture;
       await user.save();
     }
-    setcookie(res, createToken(user._id.toString()));
-    if (isNewUser) await NotificationService.notifyWelcome(user._id.toString(), user.name);
-    return res.status(200).json({ message: "Google login successful", user });
+
+    await populateNotifications(user);
+    const jwtToken = createToken(user._id.toString());
+    setcookie(res, jwtToken);
+    return res.status(200).json({ user, token: jwtToken, message: "Google login successful" });
+  } catch (err: any) {
+    console.error("❌ Google signin error:", err);
+    return res.status(500).json({ message: "server error" });
+  }
+};
+
+export const googleAuthLogin = async (_req: Request, res: Response) => {
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID!,
+    redirect_uri: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3001/google/callback",
+    response_type: "code",
+    scope: "openid email profile",
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+};
+
+export const googleCallback = async (req: Request, res: Response) => {
+  try {
+    const { code } = req.query;
+    if (!code) return res.status(400).json({ message: "Google code is required" });
+
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        code: code as string,
+        grant_type: "authorization_code",
+        redirect_uri: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3001/google/callback",
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.id_token) return res.status(401).json({ message: "Google authentication failed" });
+
+    const ticket = await client.verifyIdToken({ idToken: tokenData.id_token, audience: process.env.GOOGLE_CLIENT_ID });
+    const payload = ticket.getPayload();
+    if (!payload?.email || !payload?.sub) return res.status(400).json({ message: "Invalid Google token data" });
+
+    const { email, name, picture, sub: googleId } = payload;
+    let user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) user = await User.findOne({ googleId });
+
+    if (!user) {
+      user = new User({
+        name: name || "Google User",
+        email: email.toLowerCase(),
+        googleId,
+        avatar: picture,
+        isEmailVerified: true,
+        lastLoginAt: new Date(),
+      });
+      await user.save();
+      await NotificationService.notifyWelcome(user._id.toString(), user.name);
+    } else {
+      if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
+      user.googleId = googleId;
+      user.lastLoginAt = new Date();
+      if (picture) user.avatar = picture;
+      await user.save();
+    }
+
+    await populateNotifications(user);
+    const jwtToken = createToken(user._id.toString());
+    setcookie(res, jwtToken);
+
+    const frontendUrl = process.env.USER_FRONTEND_URL || "http://localhost:3000";
+    return res.redirect(frontendUrl);
   } catch (error) {
     console.error("Google login error:", error);
     return res.status(500).json({ message: "server error" });
@@ -83,7 +167,8 @@ export const googleLogin = async (req: Request, res: Response) => {
 };
 
 export const githubLogin = async (_req: Request, res: Response) => {
-  const params = new URLSearchParams({client_id: process.env.GITHUB_CLIENT_ID!,
+  const params = new URLSearchParams({
+    client_id: process.env.GITHUB_CLIENT_ID!,
     redirect_uri: process.env.GITHUB_CALLBACK_URL!, scope: "read:user user:email",
   });
 
@@ -95,7 +180,8 @@ export const githubCallback = async (req: Request, res: Response) => {
     const { code } = req.query;
     if (!code) return res.status(400).json({ message: "GitHub code is required" });
     const tokenResponse = await fetch("https://github.com/login/oauth/access_token",
-      { method: "POST", headers: { Accept: "application/json" },
+      {
+        method: "POST", headers: { Accept: "application/json" },
         body: new URLSearchParams({ client_id: process.env.GITHUB_CLIENT_ID!, client_secret: process.env.GITHUB_CLIENT_SECRET!, code: code as string }),
       }
     );
@@ -106,70 +192,11 @@ export const githubCallback = async (req: Request, res: Response) => {
       headers: { Authorization: `Bearer ${access_token}`, Accept: "application/vnd.github+json", "User-Agent": "Nazarify" },
     });
     const githubUser = await githubResponse.json();
-    const emailsResponse = await fetch("https://api.github.com/user/emails", {headers: { Authorization: `Bearer ${access_token}`, Accept: "application/vnd.github+json", "User-Agent": "Nazarify"}});
+    const emailsResponse = await fetch("https://api.github.com/user/emails", { headers: { Authorization: `Bearer ${access_token}`, Accept: "application/vnd.github+json", "User-Agent": "Nazarify" } });
     const emails = await emailsResponse.json();
     const email = emails.find((e: any) => e.primary && e.verified)?.email || emails.find((e: any) => e.verified)?.email;
-    if (!email) return res.status(400).json({message: "No verified GitHub email found"});
+    if (!email) return res.status(400).json({ message: "No verified GitHub email found" });
     let user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      user = await User.create({  
-        name: githubUser.name || githubUser.login,
-        email: email.toLowerCase(),
-        username: githubUser.login,
-        avatar: githubUser.avatar_url,
-        isEmailVerified: true,
-        lastLoginAt: new Date(),
-      });
-
-      await NotificationService.notifyWelcome( user._id.toString(), user.name);
-    } else {
-      if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
-
-      user.avatar = githubUser.avatar_url || user.avatar;
-      user.isEmailVerified = true;
-      user.lastLoginAt = new Date();
-      await user.save();
-    }
-
-    const token = createToken(user._id.toString());
-    setcookie(res, token);
-
-    return res.redirect(`http://localhost:5000/auth.html?token=${encodeURIComponent(token)}`);
-  } catch (error) {
-    console.error("GitHub login error:", error);
-    return res.status(500).json({ message: "server error" });
-  }
-};
-
-export const githubLogin2 = async (req: Request, res: Response) => {
-  const { platform } = req.query;
-  const params = new URLSearchParams({ client_id: process.env.GITHUB_CLIENT_ID!,redirect_uri: process.env.GITHUB_CALLBACK_URL2!,scope: "read:user user:email",state: platform === 'web' ? 'web' : 'mobile', });
-  res.redirect(`https://github.com/login/oauth/authorize?${params}`);
-};
-
-export const githubCallback2 = async (req: Request, res: Response) => {
-  try {
-    const { code, state } = req.query;
-    if (!code) return res.status(400).json({ message: "GitHub code is required" });
-    const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {method: "POST",headers: { Accept: "application/json" },
-        body: new URLSearchParams({
-          client_id: process.env.GITHUB_CLIENT_ID!,
-          client_secret: process.env.GITHUB_CLIENT_SECRET!,
-          code: code as string,
-        }),
-      }
-    );
-
-    const { access_token } = await tokenResponse.json();
-    if (!access_token) return res.status(401).json({message: "GitHub authentication failed",});
-    const headers = {Authorization: `Bearer ${access_token}`,Accept: "application/vnd.github+json", "User-Agent": "Nazarify"};
-    const githubUser = await (await fetch("https://api.github.com/user", { headers })).json();
-    const emails = await (await fetch("https://api.github.com/user/emails", { headers })).json();
-    const email = emails.find((e: any) => e.primary && e.verified)?.email || emails.find((e: any) => e.verified)?.email;
-
-    if (!email) return res.status(400).json({message: "No verified GitHub email found"});
-
-    let user = await User.findOne({email: email.toLowerCase()});
     if (!user) {
       user = await User.create({
         name: githubUser.name || githubUser.login,
@@ -179,27 +206,29 @@ export const githubCallback2 = async (req: Request, res: Response) => {
         isEmailVerified: true,
         lastLoginAt: new Date(),
       });
+
       await NotificationService.notifyWelcome(user._id.toString(), user.name);
     } else {
-      if (!user.isActive) return res.status(403).json({message: "Account is disabled"});
+      if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
+
       user.avatar = githubUser.avatar_url || user.avatar;
       user.isEmailVerified = true;
       user.lastLoginAt = new Date();
       await user.save();
     }
 
+    await populateNotifications(user);
     const token = createToken(user._id.toString());
     setcookie(res, token);
-    if (state === 'web') {
-      return res.redirect(`http://localhost:5000/auth.html?token=${encodeURIComponent(token)}`);
-    } else {
-      return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}`);
-    }
+
+    const frontendUrl = "http://localhost:3000";
+    return res.redirect(frontendUrl);
   } catch (error) {
-    console.error("GitHub login 2 error:", error);
+    console.error("GitHub login error:", error);
     return res.status(500).json({ message: "server error" });
   }
 };
+
 export const logout = async (_req: Request, res: Response) => {
   clearcookie(res);
   return res.status(200).json({ message: "Logout successful" });
