@@ -17,10 +17,6 @@ import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
 
-const swaggerPath = path.join(__dirname, "swagger-output.json");
-const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf8"));
-
-
 const app = express();
 
 app.use(cors({
@@ -31,7 +27,8 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-
+const swaggerPath = path.join(__dirname, "swagger-output.json");
+const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf8"));
 app.use("/", userauth);
 app.use("/user", user);
 app.use("/service", service);
@@ -49,16 +46,18 @@ app.get("/", (req: Request, res: Response) => res.json({ message: "Nazarify API 
 
 const PORT = process.env.PORT || 3001;
 
-mongoose
-  .connect(process.env.MONGO_URI!)
-  .then(() => {
+mongoose.connect(process.env.MONGO_URI!).then(() => {
     console.log("MongoDB connected");
 
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
-    });
+    if (process.env.NODE_ENV !== "production") {
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    }
   })
   .catch((error) => {
     console.error("MongoDB connection error:", error);
     process.exit(1);
   });
+
+export default app;
