@@ -17,7 +17,8 @@ import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
 
-const swaggerDocument = JSON.parse(fs.readFileSync(path.resolve(__dirname, './swagger-output.json'), 'utf8'));
+const swaggerPath = path.join(__dirname, "swagger-output.json");
+const swaggerDocument = JSON.parse(fs.readFileSync(swaggerPath, "utf8"));
 
 
 const app = express();

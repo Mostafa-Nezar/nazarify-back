@@ -127,6 +127,6 @@ export const toggleFeatured = async (req: Request, res: Response) => {
         return res.status(200).json({ skill, message: "Skill featured status updated successfully" });
     } catch (error) {
         console.error("Toggle skill featured error:", error);
-        return res.status(500).json({ skill, message: "server error" });
+        return res.status(500).json({ message: "server error" });
     }
 };

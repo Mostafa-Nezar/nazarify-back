@@ -16,7 +16,7 @@ export const protectUser = (req: Request, res: Response, next: NextFunction) => 
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
     if (decoded.role !== "user") return res.status(403).json({ message: "Access denied" });
 
-    (req as Request & { user?: JwtPayload }).user = decoded;
+    req.user = decoded;
 
     next();
   } catch {

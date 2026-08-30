@@ -1,6 +1,20 @@
 import { Request, Response } from "express";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import User from "../../models/user";
 import NotificationService from "../../utils/notificationService";
+
+const JWT_SECRET = process.env.JWT_SECRET!;
+const createToken = (userId: string) =>
+  jwt.sign({ sub: userId, role: "user", jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: "7d" });
+const setcookie = (res: Response, token: string) => {
+  res.cookie("token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+};
 
 export const githubLogin2 = async (req: Request, res: Response) => {
   const { platform } = req.query;

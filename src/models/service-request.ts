@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
+import mongoose, { Document, Schema, Types, CallbackError } from "mongoose";
 
 export interface IServiceRequest extends Document {
   user: Types.ObjectId;
@@ -15,6 +15,8 @@ export interface IServiceRequest extends Document {
   reviewedAt?: Date;
   completedAt?: Date;
   cancelledAt?: Date;
+  rating?: number;
+  review?: string;
 
   createdAt: Date;
   updatedAt: Date;
@@ -45,6 +47,8 @@ const serviceRequestSchema = new Schema<IServiceRequest>(
     reviewedAt: Date,
     completedAt: Date,
     cancelledAt: Date,
+    rating: { type: Number, min: 1, max: 5 },
+    review: { type: String, trim: true, maxlength: 2000 },
   },
   {
     timestamps: true,
@@ -56,13 +60,14 @@ serviceRequestSchema.index({ user: 1, createdAt: -1 });
 serviceRequestSchema.index({ service: 1, status: 1, createdAt: -1 });
 serviceRequestSchema.index({ status: 1, createdAt: -1 });
 
-serviceRequestSchema.pre("validate", function (next) {
+serviceRequestSchema.pre("validate", function (next: (err?: CallbackError) => void) {
   if (
     this.budget?.min !== undefined &&
     this.budget?.max !== undefined &&
     this.budget.min > this.budget.max
   ) {
-    return next(new Error("Minimum budget cannot exceed maximum budget"));
+    next(new Error("Minimum budget cannot exceed maximum budget"));
+    return;
   }
 
   next();
