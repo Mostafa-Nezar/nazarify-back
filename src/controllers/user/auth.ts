@@ -98,20 +98,29 @@ export const googleSignIn = async (req: Request, res: Response) => {
 };
 
 export const googleAuthLogin = async (_req: Request, res: Response) => {
+  const redirectUri = process.env.GOOGLE_CALLBACK_URL || "http://localhost:3001/google/callback";
+  console.log("[GoogleAuthLogin] Start redirect");
+  console.log("[GoogleAuthLogin] env GOOGLE_CLIENT_ID:", !!process.env.GOOGLE_CLIENT_ID);
+  console.log("[GoogleAuthLogin] redirect_uri:", redirectUri);
+
   const params = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID!,
-    redirect_uri: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3001/google/callback",
+    redirect_uri: redirectUri,
     response_type: "code",
     scope: "openid email profile",
   });
-  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+  console.log("[GoogleAuthLogin] authUrl:", authUrl);
+  res.redirect(authUrl);
 };
 
 export const googleCallback = async (req: Request, res: Response) => {
   try {
     const { code } = req.query;
-    if (!code) return res.status(400).json({ message: "Google code is required" });
 
+    if (!code) return res.status(400).json({ message: "Google code is required" });
+    const redirectUri = "http://localhost:3001/google/callback";
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -120,30 +129,29 @@ export const googleCallback = async (req: Request, res: Response) => {
         client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         code: code as string,
         grant_type: "authorization_code",
-        redirect_uri: process.env.GOOGLE_CALLBACK_URL || "http://localhost:3001/google/callback",
+        redirect_uri: redirectUri,
       }),
     });
-
     const tokenData = await tokenResponse.json();
     if (!tokenData.id_token) return res.status(401).json({ message: "Google authentication failed" });
-
     const ticket = await client.verifyIdToken({ idToken: tokenData.id_token, audience: process.env.GOOGLE_CLIENT_ID });
     const payload = ticket.getPayload();
     if (!payload?.email || !payload?.sub) return res.status(400).json({ message: "Invalid Google token data" });
-
     const { email, name, picture, sub: googleId } = payload;
+
     let user = await User.findOne({ email: email.toLowerCase() });
     if (!user) user = await User.findOne({ googleId });
 
     if (!user) {
-      user = new User({
+      const newUserData = {
         name: name || "Google User",
         email: email.toLowerCase(),
         googleId,
         avatar: picture,
         isEmailVerified: true,
         lastLoginAt: new Date(),
-      });
+      };
+      user = new User(newUserData);
       await user.save();
       await NotificationService.notifyWelcome(user._id.toString(), user.name);
     } else {
@@ -161,7 +169,6 @@ export const googleCallback = async (req: Request, res: Response) => {
     const frontendUrl = process.env.USER_FRONTEND_URL || "http://localhost:3000";
     return res.redirect(frontendUrl);
   } catch (error) {
-    console.error("Google login error:", error);
     return res.status(500).json({ message: "server error" });
   }
 };
