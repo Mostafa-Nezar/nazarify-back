@@ -14,6 +14,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@genkit-ai/google-genai": "^1.41.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",
     "cookie-parser": "^1.4.7",
@@ -21,6 +22,7 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
+    "genkit": "^1.41.0",
     "google-auth-library": "^11.0.2",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.2",
