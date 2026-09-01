@@ -17,7 +17,7 @@ import ai from "./src/routes/ai";
 import partners from "./src/routes/partners";
 import about from "./src/routes/about";
 import contact from "./src/routes/contact";
-// import messages from "./src/routes/messages";
+import messages from "./src/routes/messages";
 import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
@@ -48,7 +48,7 @@ app.use("/ai", ai);
 app.use("/partners", partners);
 app.use("/about", about);
 app.use("/contact", contact);
-// app.use("/messages", messages);
+app.use("/messages", messages);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.get("/", (req: Request, res: Response) => res.json({ message: "Nazarify API is running" }));
