@@ -3,9 +3,17 @@ import Partner from "../models/partners";
 
 export const submitPartner = async (req: Request, res: Response) => {
   try {
-    const partner = await Partner.create(req.body);
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ message: "Partner name is required" });
 
-    return res.status(201).json({ partner,message: "Partner submitted successfully" });
+    const imageUrl = (req.file as any)?.path ?? undefined;
+
+    const partner = await Partner.create({
+      ...req.body,
+      ...(imageUrl && { image: imageUrl }),
+    });
+
+    return res.status(201).json({ partner, message: "Partner submitted successfully" });
   } catch (error) {
     console.error("Submit partner error:", error);
     return res.status(500).json({ message: "Internal server error" });
