@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Types, CallbackError } from "mongoose";
 
-export interface IServiceRequest extends Document {
+export interface IBooking extends Document {
   user: Types.ObjectId;
   service: Types.ObjectId;
   title: string;
@@ -22,7 +22,7 @@ export interface IServiceRequest extends Document {
   updatedAt: Date;
 }
 
-const serviceRequestSchema = new Schema<IServiceRequest>(
+const bookingSchema = new Schema<IBooking>(
   {
     user: { type: Schema.Types.ObjectId, ref: "user", required: true, index: true },
     service: { type: Schema.Types.ObjectId, ref: "service", required: true, index: true },
@@ -56,21 +56,18 @@ const serviceRequestSchema = new Schema<IServiceRequest>(
   }
 );
 
-serviceRequestSchema.index({ user: 1, createdAt: -1 });
-serviceRequestSchema.index({ service: 1, status: 1, createdAt: -1 });
-serviceRequestSchema.index({ status: 1, createdAt: -1 });
+bookingSchema.index({ user: 1, createdAt: -1 });
+bookingSchema.index({ service: 1, status: 1, createdAt: -1 });
+bookingSchema.index({ status: 1, createdAt: -1 });
 
-serviceRequestSchema.pre("validate", function (next: (err?: CallbackError) => void) {
+bookingSchema.pre("validate", function () {
   if (
     this.budget?.min !== undefined &&
     this.budget?.max !== undefined &&
     this.budget.min > this.budget.max
   ) {
-    next(new Error("Minimum budget cannot exceed maximum budget"));
-    return;
+    throw new Error("Minimum budget cannot exceed maximum budget");
   }
-
-  next();
 });
 
-export default mongoose.model<IServiceRequest>("service-request", serviceRequestSchema);
+export default mongoose.model<IBooking>("bookings", bookingSchema);
