@@ -6,6 +6,11 @@ import Project from "../models/project";
 import Service from "../models/service";
 import Skill from "../models/skill";
 import Tool from "../models/tool";
+import Partner from "../models/partners";
+import Messages from "../models/messages";
+import Contact from "../models/contact";
+import About from "../models/about";
+
 
 const router = Router();
 
@@ -15,14 +20,18 @@ router.post("/", async (req: Request, res: Response) => {
 
     if (!prompt || typeof prompt !== "string") return res.status(400).json({ success: false, message: "prompt is required" });
 
-    const [projects, services, skills, tools] = await Promise.all([
+    const [projects, services, skills, tools, partners, messages, contact, about] = await Promise.all([
       Project.find({ isActive: true }).select("title slug description shortDescription technologies category clientName projectUrl githubUrl isFeatured").lean(),
       Service.find({ isActive: true }).lean(),
       Skill.find({ isActive: true }).lean(),
       Tool.find({ isActive: true }).lean(),
+      Partner.find({ isActive: true }).lean(),
+      Messages.find({ isActive: true }).lean(),
+      Contact.find().lean(),
+      About.find().lean(),
     ]);
 
-    const context = { projects, services, skills, tools };
+    const context = { projects, services, skills, tools, partners, messages, contact, about };
 
     const result = await ai.generate({  model: googleAI.model("gemini-3-flash-preview"),
       system: `
