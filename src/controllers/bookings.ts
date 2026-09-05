@@ -13,15 +13,12 @@ export const createBooking = async (req: Request, res: Response) => {
         const existingRequest = await Booking.findOne({ user: req.user!.sub, service, status: { $in: ["pending", "reviewing", "accepted", "in_progress"] } });
         if (existingRequest) return res.status(409).json({ message: "You already have an active request for this service" });
         const booking = await Booking.create({ ...req.body, user: req.user!.sub, contact: { ...contact, name: contact?.name, email: contact?.email } });
-        void sendBookingConfirmationEmail(booking.contact.email, booking.contact.name, booking.title)
+        await sendBookingConfirmationEmail(booking.contact.email, booking.contact.name, booking.title)
             .catch((error) => console.error("Booking confirmation email error:", error));
         return res.status(201).json({ message: "Service request submitted successfully", booking });
     } catch (error) {
         console.error("Create service request error:", error);
-        if (error instanceof Error) {
-            return res.status(500).json({ message: error.message });
-        }
-        return res.status(500).json({ message: "Unable to create service request" });
+        return res.status(500).json({ message: "server error" });
     }
 };
 
