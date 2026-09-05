@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User, { IUser } from "../../models/user";
 import NotificationService from "../../utils/notificationService";
+import { sendWelcomeEmail } from "../../utils/emailService";
 import { OAuth2Client } from "google-auth-library";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -20,6 +21,7 @@ export const register = async (req: Request, res: Response) => {
     if (await User.findOne({ email })) return res.status(409).json({ message: "Email already registered" });
     const user = await User.create({ name: name.trim(), email, password: await bcrypt.hash(password, 12) });
     await NotificationService.notifyWelcome(user._id.toString(), user.name);
+    await sendWelcomeEmail(user.email, user.name).catch((error) => console.error("Welcome email error:", error));
     await populateNotifications(user);
 
     const token = createToken(user._id.toString());
