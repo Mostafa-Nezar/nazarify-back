@@ -176,8 +176,7 @@ export const githubCallback = async (req: Request, res: Response) => {
         const jwtToken = createToken(admin._id.toString(), admin.role);
         setcookie(res, jwtToken);
         res.setHeader("Authorization", `Bearer ${jwtToken}`);
-        const frontendUrl = process.env.ADMIN_FRONTEND_URL || "http://localhost:3000/login";
-        return res.redirect(`${frontendUrl}?token=${encodeURIComponent(jwtToken)}`);
+        return res.redirect(`${process.env.ADMIN_FRONTEND_URL}?token=${encodeURIComponent(jwtToken)}`);
     } catch (error) {
         console.error("GitHub admin login error:", error);
         return res.status(500).json({ message: "server error" });

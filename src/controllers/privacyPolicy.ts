@@ -17,7 +17,7 @@ export const updatePrivacyPolicy = async (req: Request, res: Response) => {
     const policy = await PrivacyPolicy.findOneAndUpdate(
       {},
       { $set: { ...req.body, lastUpdated: new Date() } },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
     return res.status(200).json({ privacyPolicy: policy, message: "Privacy policy updated successfully" });
   } catch (error) {
@@ -34,7 +34,7 @@ export const addSection = async (req: Request, res: Response) => {
     const policy = await PrivacyPolicy.findOneAndUpdate(
       {},
       { $push: { sections: { title, content, sortOrder: sortOrder ?? 0 } }, $set: { lastUpdated: new Date() } },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
 
     return res.status(201).json({ privacyPolicy: policy, message: "Section added successfully" });
@@ -49,7 +49,7 @@ export const deleteSection = async (req: Request, res: Response) => {
     const policy = await PrivacyPolicy.findOneAndUpdate(
       {},
       { $pull: { sections: { _id: req.params.id } }, $set: { lastUpdated: new Date() } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!policy) return res.status(404).json({ message: "Privacy policy not found" });

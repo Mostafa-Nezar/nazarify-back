@@ -41,19 +41,19 @@ export const getProjects = async (req: Request, res: Response) => {
         });
     } catch (error) {
         console.error("Get projects error:", error);
-        return res.status(500).json({message: "Server error"});
+        return res.status(500).json({ message: "Server error" });
     }
 };
 
 export const getProject = async (req: Request, res: Response) => {
     try {
         const project = await Project.findOne({ _id: req.params.id, isActive: true });
-        if (!project) return res.status(404).json({message: "Project not found"});
-        
+        if (!project) return res.status(404).json({ message: "Project not found" });
+
         return res.status(200).json({ project });
     } catch (error) {
         console.error("Get project error:", error);
-        return res.status(500).json({message: "Server error"});
+        return res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -75,7 +75,7 @@ export const createProject = async (req: Request, res: Response) => {
         return res.status(201).json({ message: "Project created successfully", project });
     } catch (error) {
         console.error("Create project error:", error);
-        return res.status(500).json({message: "Server error"});
+        return res.status(500).json({ message: "Server error" });
     }
 };
 
@@ -84,7 +84,7 @@ export const updateProject = async (req: Request, res: Response) => {
         if (req.body.slug) {
             req.body.slug = req.body.slug.trim().toLowerCase();
             const existingProject = await Project.findOne({ slug: req.body.slug, _id: { $ne: req.params.id } });
-            if (existingProject) return res.status(409).json({message: "Slug already exists"});
+            if (existingProject) return res.status(409).json({ message: "Slug already exists" });
         }
 
         const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
@@ -111,13 +111,13 @@ export const updateProject = async (req: Request, res: Response) => {
             updateData.gallery = existingGallery;
         }
 
-        const project = await Project.findByIdAndUpdate(req.params.id, { $set: updateData }, { new: true, runValidators: true });
-        if (!project) return res.status(404).json({message: "Project not found"});
+        const project = await Project.findByIdAndUpdate(req.params.id, { $set: updateData }, { returnDocument: "after", runValidators: true });
+        if (!project) return res.status(404).json({ message: "Project not found" });
 
-        return res.status(200).json({message: "Project updated successfully", project});
+        return res.status(200).json({ message: "Project updated successfully", project });
     } catch (error) {
         console.error("Update project error:", error);
-        return res.status(500).json({message: "server error"});
+        return res.status(500).json({ message: "server error" });
     }
 };
 
@@ -125,12 +125,12 @@ export const deleteProject = async (req: Request, res: Response) => {
     try {
         const project = await Project.findByIdAndDelete(req.params.id);
 
-        if (!project) return res.status(404).json({message: "Project not found"});
+        if (!project) return res.status(404).json({ message: "Project not found" });
 
-        return res.status(200).json({message: "Project deleted successfully"});
+        return res.status(200).json({ message: "Project deleted successfully" });
     } catch (error) {
         console.error("Delete project error:", error);
-        return res.status(500).json({message: "server error"});
+        return res.status(500).json({ message: "server error" });
     }
 };
 
@@ -138,29 +138,29 @@ export const toggleProject = async (req: Request, res: Response) => {
     try {
         const project = await Project.findById(req.params.id);
 
-        if (!project) return res.status(404).json({message: "Project not found"});
+        if (!project) return res.status(404).json({ message: "Project not found" });
 
         project.isActive = !project.isActive;
         await project.save();
 
-        return res.status(200).json({message: "Project status updated successfully", project});
+        return res.status(200).json({ message: "Project status updated successfully", project });
     } catch (error) {
         console.error("Toggle project error:", error);
-        return res.status(500).json({message: "server error"});
+        return res.status(500).json({ message: "server error" });
     }
 };
 
 export const toggleFeatured = async (req: Request, res: Response) => {
     try {
         const project = await Project.findById(req.params.id);
-        if (!project) return res.status(404).json({message: "Project not found"});
+        if (!project) return res.status(404).json({ message: "Project not found" });
 
         project.isFeatured = !project.isFeatured;
         await project.save();
 
-        return res.status(200).json({message: "Project featured status updated successfully", project});
+        return res.status(200).json({ message: "Project featured status updated successfully", project });
     } catch (error) {
         console.error("Toggle featured error:", error);
-        return res.status(500).json({message: "server error"});
+        return res.status(500).json({ message: "server error" });
     }
 };

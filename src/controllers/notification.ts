@@ -72,7 +72,7 @@ export const markAsRead = async (req: Request, res: Response) => {
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, recipient: req.user!.sub, recipientType: req.user!.role, },
       { $set: { isRead: true, readAt: new Date() } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!notification) return res.status(404).json({ message: "Notification not found" });
@@ -105,7 +105,7 @@ export const archiveNotification = async (req: Request, res: Response) => {
     const notification = await Notification.findOneAndUpdate(
       { _id: req.params.id, recipient: req.user!.sub, recipientType: req.user!.role, },
       { $set: { isArchived: true, archivedAt: new Date(), } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!notification) return res.status(404).json({ message: "Notification not found" });
@@ -117,7 +117,7 @@ export const archiveNotification = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteNotification = async (req: Request,res: Response) => {
+export const deleteNotification = async (req: Request, res: Response) => {
   try {
     const notification = await Notification.findOneAndDelete({
       _id: req.params.id,

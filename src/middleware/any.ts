@@ -7,10 +7,13 @@ interface JwtPayload { sub: string; role: "user" | "admin"; jti: string; iat: nu
 
 export const protectAny = (req: Request, res: Response, next: NextFunction) => {
   const token =
-    req.cookies?.token || req.headers.authorization?.startsWith("Bearer ")
-      ? req.cookies?.token || req.headers.authorization!.split(" ")[1] : null;
+    req.cookies?.admin_token ||
+    req.cookies?.token ||
+    (req.headers.authorization?.startsWith("Bearer ")
+      ? req.headers.authorization.split(" ")[1]
+      : null);
 
-  if (!token) return res.status(401).json({ message: "Authentication required" })
+  if (!token) return res.status(401).json({ message: "Authentication required" });
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;

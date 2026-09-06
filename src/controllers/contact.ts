@@ -17,7 +17,7 @@ export const updateContact = async (req: Request, res: Response) => {
     const contact = await Contact.findOneAndUpdate(
       {},
       { $set: req.body },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
 
     return res.status(200).json({

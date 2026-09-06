@@ -18,7 +18,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     const user = await User.findByIdAndUpdate(
       req.user?.sub,
       { $set: { ...req.body, ...(req.file && { avatar: req.file.path }) } },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });

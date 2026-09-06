@@ -136,7 +136,7 @@ export const updateTool = async (req: Request, res: Response) => {
       req.params.id,
       { $set: req.body },
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true,
       }
     );

@@ -17,7 +17,7 @@ export const updateTermsOfService = async (req: Request, res: Response) => {
     const terms = await TermsOfService.findOneAndUpdate(
       {},
       { $set: { ...req.body, lastUpdated: new Date() } },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
     return res.status(200).json({ termsOfService: terms, message: "Terms of service updated successfully" });
   } catch (error) {
@@ -34,7 +34,7 @@ export const addSection = async (req: Request, res: Response) => {
     const terms = await TermsOfService.findOneAndUpdate(
       {},
       { $push: { sections: { title, content, sortOrder: sortOrder ?? 0 } }, $set: { lastUpdated: new Date() } },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
 
     return res.status(201).json({ termsOfService: terms, message: "Section added successfully" });
@@ -49,7 +49,7 @@ export const deleteSection = async (req: Request, res: Response) => {
     const terms = await TermsOfService.findOneAndUpdate(
       {},
       { $pull: { sections: { _id: req.params.id } }, $set: { lastUpdated: new Date() } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!terms) return res.status(404).json({ message: "Terms of service not found" });

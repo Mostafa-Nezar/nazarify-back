@@ -84,7 +84,7 @@ export const updateSkill = async (req: Request, res: Response) => {
             req.body.slug = req.body.slug.trim().toLowerCase();
             if (await Skill.exists({ slug: req.body.slug, _id: { $ne: req.params.id } })) return res.status(409).json({ message: "Slug already exists" });
         }
-        const skill = await Skill.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true, runValidators: true });
+        const skill = await Skill.findByIdAndUpdate(req.params.id, { $set: req.body }, { returnDocument: "after", runValidators: true });
 
         if (!skill) return res.status(404).json({ message: "Skill not found" });
         return res.status(200).json({ skill, message: "Skill updated successfully" });

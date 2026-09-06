@@ -24,7 +24,11 @@ export const createBooking = async (req: Request, res: Response) => {
 
 export const updateBooking = async (req: Request, res: Response) => {
     try {
-        const booking = await Booking.findOneAndUpdate({ _id: req.params.id, ...(req.user!.role !== "admin" && { user: req.user!.sub }), }, req.body, { new: true, runValidators: true });
+        const booking = await Booking.findOneAndUpdate(
+            { _id: req.params.id, ...(req.user!.role !== "admin" && { user: req.user!.sub }) },
+            req.body,
+            { new: true, returnDocument: "after", runValidators: true }
+        );
         if (!booking) return res.status(404).json({ message: "Service request not found" });
 
         return res.status(200).json({ message: "Service request updated successfully", booking });
@@ -36,10 +40,21 @@ export const updateBooking = async (req: Request, res: Response) => {
 
 export const cancelBooking = async (req: Request, res: Response) => {
     try {
-        const booking = await Booking.findOne({ _id: req.params.id, ...(req.user!.role !== "admin" && { user: req.user!.sub }), });
+        const booking = await Booking.findOne({ _id: req.params.id, ...(req.user!.role !== "admin" && { user: req.user!.sub }) });
         if (!booking) return res.status(404).json({ message: "Service request not found" });
-        if (!["pending", "reviewing", "accepted"].includes(booking.status))
-            return res.status(400).json({ message: "This request cannot be cancelled", });
+
+        if (booking.status === "cancelled") {
+            return res.status(400).json({ message: "This request is already cancelled" });
+        }
+
+        const isAdmin = req.user!.role === "admin";
+        const cancellableStatuses = isAdmin
+            ? ["pending", "reviewing", "accepted", "in_progress"]
+            : ["pending", "reviewing", "accepted"];
+
+        if (!cancellableStatuses.includes(booking.status)) {
+            return res.status(400).json({ message: "This request cannot be cancelled" });
+        }
 
         booking.status = "cancelled";
         booking.cancelledAt = new Date();

@@ -4,8 +4,18 @@ import About from "../models/about";
 
 export const getAbout = async (_req: Request, res: Response) => {
   try {
-    const about = await About.findOne();
-    if (!about) return res.status(404).json({ message: "About not found" });
+    const about = await About.findOneAndUpdate(
+      {},
+      {
+        $setOnInsert: {
+          title: "About Nazarify",
+          description: "Tell your visitors about Nazarify.",
+          faqs: [],
+          whyNazarify: [],
+        },
+      },
+      { returnDocument: "after", upsert: true, setDefaultsOnInsert: true }
+    );
     return res.status(200).json({ about });
   } catch (error) {
     console.error("Get about error:", error);
@@ -15,7 +25,7 @@ export const getAbout = async (_req: Request, res: Response) => {
 
 export const updateAbout = async (req: Request, res: Response) => {
   try {
-    const about = await About.findOneAndUpdate({}, { $set: req.body }, { new: true, upsert: true, runValidators: true });
+    const about = await About.findOneAndUpdate({}, { $set: req.body }, { returnDocument: "after", upsert: true, runValidators: true });
     return res.status(200).json({ about, message: "About updated successfully" });
   } catch (error) {
     console.error("Update about error:", error);
@@ -28,7 +38,7 @@ export const addFaq = async (req: Request, res: Response) => {
     const { question, answer } = req.body;
     if (!question || !answer) return res.status(400).json({ message: "Question and answer are required" });
 
-    const about = await About.findOneAndUpdate({}, { $push: { faqs: { question, answer } } }, { new: true, upsert: true, runValidators: true });
+    const about = await About.findOneAndUpdate({}, { $push: { faqs: { question, answer } } }, { returnDocument: "after", upsert: true, runValidators: true });
 
     return res.status(201).json({ about, message: "FAQ added successfully" });
   } catch (error) {
@@ -39,7 +49,7 @@ export const addFaq = async (req: Request, res: Response) => {
 
 export const deleteFaq = async (req: Request, res: Response) => {
   try {
-    const about = await About.findOneAndUpdate({}, { $pull: { faqs: { _id: req.params.id } } }, { new: true });
+    const about = await About.findOneAndUpdate({}, { $pull: { faqs: { _id: req.params.id } } }, { returnDocument: "after" });
 
     if (!about) return res.status(404).json({ message: "About not found" });
 
@@ -58,7 +68,7 @@ export const addWhyNazarify = async (req: Request, res: Response) => {
     const about = await About.findOneAndUpdate(
       {},
       { $push: { whyNazarify: { title, description } } },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
 
     return res.status(201).json({ about, message: "Why Nazarify item added successfully" });
@@ -73,7 +83,7 @@ export const deleteWhyNazarify = async (req: Request, res: Response) => {
     const about = await About.findOneAndUpdate(
       {},
       { $pull: { whyNazarify: { _id: req.params.id } } },
-      { new: true }
+      { returnDocument: "after" }
     );
 
     if (!about) return res.status(404).json({ message: "About not found" });
