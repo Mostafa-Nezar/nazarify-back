@@ -31,9 +31,17 @@ class NotificationService {
     return await this.createNotification(userId, title, message, "system", "user", "waving_hand");
   }
 
-  static async notifyServiceRequest(userId: string | Types.ObjectId, serviceName: string) {
-    const title = "Service Request Received";
-    const message = `We have successfully received your request for ${serviceName}. Our team will review it and get back to you shortly.`;
+  static async notifyProfileUpdated(userId: string | Types.ObjectId, userName: string) {
+    const title = "Profile Updated";
+    const message = `Profile updated successfully ${userName}!`;
+    return await this.createNotification(userId, title, message, "system", "user", "waving_hand");
+  }
+
+
+
+  static async notifyBooking(userId: string | Types.ObjectId, serviceName: string) {
+    const title = "Booking Request Received";
+    const message = `We have successfully received your booking request for ${serviceName}. Our team will review it and get back to you shortly.`;
     return await this.createNotification(userId, title, message, "request", "user", "design_services");
   }
 
@@ -42,6 +50,14 @@ class NotificationService {
     const message = `The status of your project "${projectName}" has been updated to: ${status}.`;
     return await this.createNotification(userId, title, message, "project", "user", "update");
   }
+
+  static async notifyBookingAccepted(userId: string | Types.ObjectId, serviceName: string) {
+    const title = "Booking Request Accepted";
+    const message = `We have successfully accepted your booking request for ${serviceName}. Our team will get back to you shortly.`;
+    return await this.createNotification(userId, title, message, "request", "user", "design_services");
+  }
+
+
 
   static async notifyPaymentReceived(userId: string | Types.ObjectId,projectName: string,amount: number | string) {
     const title = "Payment Received";

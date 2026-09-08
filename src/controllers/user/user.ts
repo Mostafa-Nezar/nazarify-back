@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import User from "../../models/user";
+import NotificationService from "../../utils/notificationService";
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
@@ -22,6 +23,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
+    NotificationService.notifyProfileUpdated(user._id, user.name);
     return res.status(200).json({ message: "Profile updated successfully", user });
   } catch (error) {
     console.error("Update profile error:", error);
