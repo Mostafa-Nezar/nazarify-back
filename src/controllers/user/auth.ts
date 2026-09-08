@@ -87,7 +87,7 @@ export const googleSignIn = async (req: Request, res: Response) => {
 
       user.googleId = googleId;
       user.lastLoginAt = new Date();
-      if (picture) user.avatar = picture;
+      if (!user.avatar && picture) user.avatar = picture;
       await user.save();
     }
 
@@ -149,7 +149,7 @@ export const googleCallback = async (req: Request, res: Response) => {
       if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
       user.googleId = googleId;
       user.lastLoginAt = new Date();
-      if (picture) user.avatar = picture;
+      if (!user.avatar && picture) user.avatar = picture;
       await user.save();
     }
 
@@ -208,7 +208,7 @@ export const githubCallback = async (req: Request, res: Response) => {
     } else {
       if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
 
-      user.avatar = githubUser.avatar_url || user.avatar;
+      if (!user.avatar && githubUser.avatar_url) user.avatar = githubUser.avatar_url;
       user.isEmailVerified = true;
       user.lastLoginAt = new Date();
       await user.save();
