@@ -16,10 +16,10 @@ const populateNotifications = async (user: IUser) => user.populate("notification
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone } = req.body;
     if (!name || !email || !password) { return res.status(400).json({ message: "All fields are required" }); }
     if (await User.findOne({ email })) return res.status(409).json({ message: "Email already registered" });
-    const user = await User.create({ name: name.trim(), email, password: await bcrypt.hash(password, 12) });
+    const user = await User.create({ name: name.trim(), email: email.toLowerCase(), password: await bcrypt.hash(password, 12), phone: phone?.trim() });
     await NotificationService.notifyWelcome(user._id.toString(), user.name);
     await sendWelcomeEmail(user.email, user.name).catch((error) => console.error("Welcome email error:", error));
     await populateNotifications(user);
@@ -198,6 +198,7 @@ export const githubCallback = async (req: Request, res: Response) => {
         name: githubUser.name || githubUser.login,
         email: email.toLowerCase(),
         username: githubUser.login,
+        githubId: githubUser.id,
         avatar: githubUser.avatar_url,
         isEmailVerified: true,
         lastLoginAt: new Date(),
