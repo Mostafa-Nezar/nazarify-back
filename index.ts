@@ -25,7 +25,7 @@ import path from "path";
 const app = express();
 
 app.use(cors({
-  origin: true,
+  origin: "https://nazarify.vercel.app",
   credentials: true,
 }));
 
