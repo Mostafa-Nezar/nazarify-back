@@ -10,8 +10,23 @@ import { OAuth2Client } from "google-auth-library";
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET!;
 const createToken = (userId: string) => jwt.sign({ sub: userId, role: "user", jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: "7d" });
-const setcookie = (res: Response, token: string) => { res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", maxAge: 7 * 24 * 60 * 60 * 1000 }) };
-const clearcookie = (res: Response) => { res.clearCookie("token", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"}) };
+const isProduction = process.env.NODE_ENV === "production";
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+};
+const setcookie = (res: Response, token: string) => res.cookie("token", token, cookieOptions);
+const clearcookie = (res: Response) => res.clearCookie("token", cookieOptions);
+
+// Firefox can block/partition the API cookie on the next frontend -> API
+// request. A fragment is not sent in HTTP requests or Referer headers, unlike
+// a query-string JWT, so the frontend can store it and then use Authorization.
+const redirectWithToken = (res: Response, token: string) => {
+  const frontend = process.env.USER_FRONTEND_URL!;
+  return res.redirect(`${frontend.replace(/\/$/, "")}#token=${encodeURIComponent(token)}`);
+};
 const populateNotifications = async (user: IUser) => user.populate("notifications");
 
 export const register = async (req: Request, res: Response) => {
@@ -156,7 +171,7 @@ export const googleCallback = async (req: Request, res: Response) => {
     await populateNotifications(user);
     const jwtToken = createToken(user._id.toString());
     setcookie(res, jwtToken);
-    return res.redirect(process.env.USER_FRONTEND_URL!);
+    return redirectWithToken(res, jwtToken);
   } catch (error) {
     return res.status(500).json({ message: "server error" });
   }
@@ -218,7 +233,7 @@ export const githubCallback = async (req: Request, res: Response) => {
     const token = createToken(user._id.toString());
     setcookie(res, token);
 
-    return res.redirect(process.env.USER_FRONTEND_URL!);
+    return redirectWithToken(res, token);
   } catch (error) {
     console.error("GitHub login error:", error);
     return res.status(500).json({ message: "server error" });
