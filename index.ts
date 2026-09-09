@@ -23,13 +23,9 @@ import fs from "fs";
 import path from "path";
 
 const app = express();
-app.set("trust proxy", 1);
 
 
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
+app.use(cors({ origin: true, credentials: true }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
