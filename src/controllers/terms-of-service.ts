@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import TermsOfService from "../models/termsOfService";
+import TermsOfService from "../models/terms-of-service";
 
 export const getTermsOfService = async (_req: Request, res: Response) => {
   try {

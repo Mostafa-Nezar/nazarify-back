@@ -36,9 +36,10 @@ const serviceSchema = new Schema<IService>(
     sortOrder: { type: Number, default: 0, index: true },
     createdBy: { type: Schema.Types.ObjectId, ref: "admin", required: true, index: true },
   },
-  { timestamps: true, versionKey: false }
+  { timestamps: true, versionKey: false, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 serviceSchema.index({ isActive: 1, sortOrder: 1 });
+serviceSchema.virtual("offers", { ref: "offer", localField: "_id", foreignField: "service" });
 
 export default mongoose.model<IService>("service", serviceSchema);

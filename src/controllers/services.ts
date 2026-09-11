@@ -1,9 +1,23 @@
 import { Request, Response } from "express";
 import Service from "../models/service";
+import "../models/offers";
+
+const activeOfferMatch = {
+  isActive: true,
+  startAt: { $lte: new Date() },
+  endAt: { $gte: new Date() },
+  $or: [{ usageLimit: { $exists: false } }, { $expr: { $lt: ["$usageCount", "$usageLimit"] } }],
+};
 
 export const getServices = async (_req: Request, res: Response) => {
   try {
-    const services = await Service.find({ isActive: true }).sort({ sortOrder: 1, createdAt: -1 })
+    const services = await Service.find({ isActive: true })
+      .sort({ sortOrder: 1, createdAt: -1 })
+      .populate({
+        path: "offers",
+        match: activeOfferMatch,
+        options: { sort: { isFeatured: -1, sortOrder: 1, createdAt: -1 } },
+      });
     return res.status(200).json({ services });
   } catch (error) {
     console.error("Get services error:", error);
@@ -14,8 +28,13 @@ export const getServices = async (_req: Request, res: Response) => {
 export const getService = async (req: Request, res: Response) => {
   try {
     const service = await Service.findOne({ _id: req.params.id, isActive: true })
+      .populate({
+        path: "offers",
+        match: activeOfferMatch,
+        options: { sort: { isFeatured: -1, sortOrder: 1, createdAt: -1 } },
+      });
 
-    if (!service) return res.status(404).json({ message: "Service not found" })
+    if (!service) return res.status(404).json({ message: "Service not found" });
 
     return res.status(200).json({ service });
   } catch (error) {

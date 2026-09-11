@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import PrivacyPolicy from "../models/privacyPolicy";
+import PrivacyPolicy from "../models/privacy-policy";
 
 export const getPrivacyPolicy = async (_req: Request, res: Response) => {
   try {

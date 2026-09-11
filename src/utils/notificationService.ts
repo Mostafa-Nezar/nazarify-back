@@ -12,7 +12,7 @@ class NotificationService {
       await notification.save();
 
       if (this.io) {
-        this.io.to(`user_${recipientId.toString()}`).emit("newNotification", { 
+        this.io.to(`user_${recipientId.toString()}`).emit("newNotification", {
           _id: notification._id, title: notification.title, message: notification.message, type: notification.type,
           icon: notification.icon, isRead: notification.isRead, createdAt: notification.createdAt,
         });
@@ -37,15 +37,13 @@ class NotificationService {
     return await this.createNotification(userId, title, message, "system", "user", "waving_hand");
   }
 
-
-
   static async notifyBooking(userId: string | Types.ObjectId, serviceName: string) {
     const title = "Booking Request Received";
     const message = `We have successfully received your booking request for ${serviceName}. Our team will review it and get back to you shortly.`;
     return await this.createNotification(userId, title, message, "request", "user", "design_services");
   }
 
-  static async notifyProjectStatusUpdate(userId: string | Types.ObjectId,projectName: string,status: string) {
+  static async notifyProjectStatusUpdate(userId: string | Types.ObjectId, projectName: string, status: string) {
     const title = "Project Status Updated";
     const message = `The status of your project "${projectName}" has been updated to: ${status}.`;
     return await this.createNotification(userId, title, message, "project", "user", "update");
@@ -59,7 +57,7 @@ class NotificationService {
 
 
 
-  static async notifyPaymentReceived(userId: string | Types.ObjectId,projectName: string,amount: number | string) {
+  static async notifyPaymentReceived(userId: string | Types.ObjectId, projectName: string, amount: number | string) {
     const title = "Payment Received";
     const message = `We have successfully received your payment of $${amount} for the project "${projectName}". Thank you!`;
     return await this.createNotification(userId, title, message, "success", "user", "payments");
@@ -69,6 +67,17 @@ class NotificationService {
     const users = await User.find({ isActive: true });
     return await Promise.allSettled(
       users.map((user) => this.createNotification(user._id as Types.ObjectId, title, message, "system", "user", "campaign"))
+    );
+  }
+
+  static async notifyNewOffer(serviceName: string, offerTitle?: string, discount?: string | number) {
+    const title = offerTitle ? `Special Offer: ${offerTitle}` : `New Offer on ${serviceName}!`;
+    const message = discount
+      ? `A new offer with ${discount}% discount is now available for ${serviceName}. Don't miss out!`
+      : `A new special offer is now available for ${serviceName}. Check it out now!`;
+    const users = await User.find({ isActive: true });
+    return await Promise.allSettled(
+      users.map((user) => this.createNotification(user._id as Types.ObjectId, title, message, "service", "user", "local_offer"))
     );
   }
 }
