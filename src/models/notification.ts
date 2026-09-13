@@ -21,8 +21,8 @@ export interface INotification extends Document {
 
 const notificationSchema = new Schema<INotification>(
   {
-    recipient: { type: Schema.Types.ObjectId, required: true, index: true },
-    recipientType: { type: String, enum: ["user", "admin"], required: true, index: true },
+    recipient: { type: Schema.Types.ObjectId, required: true, index: true, ref: "user" },
+    recipientType: { type: String, enum: ["user", "admin"], required: true, index: true, ref: "admin" },
     type: { type: String, enum: ["system", "service", "project", "tool", "account", "security", "request", "message", "success", "warning", "error",], default: "system", index: true, },
     title: { type: String, required: true, trim: true, minlength: 1, maxlength: 150 },
     message: { type: String, required: true, trim: true, minlength: 1, maxlength: 1000 },

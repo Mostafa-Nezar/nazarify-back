@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Notification from "../models/notification";
+import NotificationService from "../utils/notificationService";
 
 export const getNotifications = async (req: Request, res: Response) => {
   try {
@@ -70,7 +71,7 @@ export const getNotification = async (req: Request, res: Response) => {
 export const markAsRead = async (req: Request, res: Response) => {
   try {
     const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, recipient: req.user!.sub, recipientType: req.user!.role, },
+      { _id: req.params.id, recipient: req.user!.sub, recipientType: req.user!.role },
       { $set: { isRead: true, readAt: new Date() } },
       { returnDocument: "after" }
     );
@@ -89,7 +90,7 @@ export const markAsRead = async (req: Request, res: Response) => {
 export const markAllAsRead = async (req: Request, res: Response) => {
   try {
     await Notification.updateMany(
-      { recipient: req.user!.sub, recipientType: req.user!.role, isRead: false, isArchived: false, },
+      { recipient: req.user!.sub, recipientType: req.user!.role, isRead: false, isArchived: false },
       { $set: { isRead: true, readAt: new Date() } }
     );
 
@@ -103,8 +104,8 @@ export const markAllAsRead = async (req: Request, res: Response) => {
 export const archiveNotification = async (req: Request, res: Response) => {
   try {
     const notification = await Notification.findOneAndUpdate(
-      { _id: req.params.id, recipient: req.user!.sub, recipientType: req.user!.role, },
-      { $set: { isArchived: true, archivedAt: new Date(), } },
+      { _id: req.params.id, recipient: req.user!.sub, recipientType: req.user!.role },
+      { $set: { isArchived: true, archivedAt: new Date() } },
       { returnDocument: "after" }
     );
 
@@ -136,17 +137,64 @@ export const deleteNotification = async (req: Request, res: Response) => {
 
 export const createNotification = async (req: Request, res: Response) => {
   try {
-    const { recipient, recipientType, title, message } = req.body;
+    const { recipient, recipientType = "user", title, message, type = "system", icon } = req.body;
+    if (!title || !message) return res.status(400).json({ message: "Title and message are required" });
 
-    if (!recipient || !recipientType || !title || !message) {
-      return res.status(400).json({ message: "Recipient, recipientType, title and message are required", });
+    if (recipientType === "all") {
+      const results = await NotificationService.notifyAllUsers(title, message, type, icon);
+      return res.status(201).json({ message: "Notifications sent to all users successfully", count: results.length, });
     }
-
-    const notification = await Notification.create(req.body);
-
-    return res.status(201).json({ message: "Notification created successfully", notification, });
-  } catch (error) {
+    if (!recipient) return res.status(400).json({ message: "Recipient is required for user notification" });
+    const notification = await NotificationService.createNotification(recipient, title, message, type, "user", icon);
+    return res.status(201).json({ message: "Notification created successfully", notification });
+  } catch (error: any) {
     console.error("Create notification error:", error);
-    return res.status(500).json({ message: "server error" });
+    return res.status(500).json({ message: error.message || "Server error" });
+  }
+};
+
+export const getAllNotificationsToAdmin = async (req: Request, res: Response) => {
+  try {
+    const { page = 1, limit = 15 } = req.query;
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const perPage = Math.min(Math.max(Number(limit) || 15, 1), 100);
+    const skip = (currentPage - 1) * perPage;
+
+    const [notifications, total] = await Promise.all([
+      Notification.find()
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(perPage)
+        .populate("recipient", "name email googleId githubId avatar username"),
+      Notification.countDocuments(),
+    ]);
+
+    const pages = Math.ceil(total / perPage);
+
+    return res.status(200).json({
+      notifications,
+      pagination: {
+        page: currentPage,
+        limit: perPage,
+        total,
+        pages,
+        hasNextPage: currentPage < pages,
+        hasPreviousPage: currentPage > 1,
+      },
+    });
+  } catch (error) {
+    console.error("Get all notifications to admin error:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const deleteNotificationByAdmin = async (req: Request, res: Response) => {
+  try {
+    const notification = await Notification.findByIdAndDelete(req.params.id);
+    if (!notification) return res.status(404).json({ message: "Notification not found" });
+    return res.status(200).json({ message: "Notification deleted successfully" });
+  } catch (error) {
+    console.error("Delete notification by admin error:", error);
+    return res.status(500).json({ message: "Server error" });
   }
 };

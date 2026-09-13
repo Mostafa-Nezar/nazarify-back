@@ -25,6 +25,30 @@ class NotificationService {
     }
   }
 
+  static async notifyAllUsers(title: string, message: string, type: string = "system", icon?: string) {
+    try {
+      const users = await User.find({ isActive: true });
+      const results = await Promise.allSettled(
+        users.map((user) => this.createNotification(user._id as Types.ObjectId, title, message, type, "user", icon))
+      );
+
+      if (this.io) {
+        this.io.emit("broadcastNotification", {
+          title,
+          message,
+          type,
+          icon,
+          createdAt: new Date(),
+        });
+      }
+
+      return results;
+    } catch (error) {
+      console.error("Error notifying all users:", error);
+      throw error;
+    }
+  }
+
   static async notifyWelcome(userId: string | Types.ObjectId, userName: string) {
     const title = "Welcome to Nazarify";
     const message = `Welcome to Nazarify, ${userName}! Thank you for joining us.`;
@@ -54,8 +78,6 @@ class NotificationService {
     const message = `We have successfully accepted your booking request for ${serviceName}. Our team will get back to you shortly.`;
     return await this.createNotification(userId, title, message, "request", "user", "design_services");
   }
-
-
 
   static async notifyPaymentReceived(userId: string | Types.ObjectId, projectName: string, amount: number | string) {
     const title = "Payment Received";

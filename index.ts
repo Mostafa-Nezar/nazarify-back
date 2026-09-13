@@ -1,5 +1,7 @@
 import "dotenv/config";
 import express, { Request, Response } from "express";
+import http from "http";
+import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
@@ -24,9 +26,24 @@ import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
 import offers from "./src/routes/offers";
+import NotificationService from "./src/utils/notificationService";
 
 const app = express();
+const server = http.createServer(app);
 
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: true,
+    credentials: true,
+  },
+});
+
+NotificationService.setSocketIO(io);
+
+io.on("connection", (socket) => {
+  socket.on("join", (userId: string) => { if (userId) socket.join(`user_${userId}`) });
+  socket.on("leave", (userId: string) => { if (userId) socket.leave(`user_${userId}`) });
+});
 
 app.use(cors({ origin: true, credentials: true }));
 
@@ -63,7 +80,7 @@ mongoose.connect(process.env.MONGO_URI!).then(() => {
   console.log("MongoDB connected");
 
   if (process.env.NODE_ENV !== "production") {
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   }
@@ -73,5 +90,5 @@ mongoose.connect(process.env.MONGO_URI!).then(() => {
     process.exit(1);
   });
 
+export { io };
 export default app;
-
