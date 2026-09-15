@@ -1,7 +1,6 @@
 import "dotenv/config";
 import express, { Request, Response } from "express";
 import http from "http";
-import { Server as SocketIOServer } from "socket.io";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import mongoose from "mongoose";
@@ -31,19 +30,7 @@ import NotificationService from "./src/utils/notificationService";
 const app = express();
 const server = http.createServer(app);
 
-const io = new SocketIOServer(server, {
-  cors: {
-    origin: true,
-    credentials: true,
-  },
-});
-
-NotificationService.setSocketIO(io);
-
-io.on("connection", (socket) => {
-  socket.on("join", (userId: string) => { if (userId) socket.join(`user_${userId}`) });
-  socket.on("leave", (userId: string) => { if (userId) socket.leave(`user_${userId}`) });
-});
+NotificationService.init(server);
 
 app.use(cors({ origin: true, credentials: true }));
 
@@ -90,5 +77,4 @@ mongoose.connect(process.env.MONGO_URI!).then(() => {
     process.exit(1);
   });
 
-export { io };
 export default app;

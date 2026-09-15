@@ -2,9 +2,23 @@ import Notification from "../models/notification";
 import User from "../models/user";
 import { Types } from "mongoose";
 
+import { Server as SocketIOServer, Socket } from "socket.io";
+import type { Server as HttpServer } from "http";
+
 class NotificationService {
-  static io: any = null;
-  static setSocketIO(socketIO: any) { this.io = socketIO; }
+  static io: SocketIOServer | null = null;
+  static init(server: HttpServer) {
+    this.io = new SocketIOServer(server, { cors: { origin: true, credentials: true, }, });
+    this.io.on("connection", (socket: Socket) => {
+      socket.on("join", (userId: string) => { if (userId) socket.join(`user_${userId}`); });
+      socket.on("leave", (userId: string) => { if (userId) socket.leave(`user_${userId}`); });
+    });
+    return this.io;
+  }
+
+  static initSocket(server: HttpServer) { return this.init(server); }
+  static setSocketIO(socketIO: SocketIOServer) { this.io = socketIO; }
+  static getIO(): SocketIOServer | null { return this.io; }
 
   static async createNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string = "system", recipientType: "user" | "admin" = "user", icon?: string) {
     try {
@@ -104,4 +118,5 @@ class NotificationService {
   }
 }
 
+export const getIO = () => NotificationService.getIO();
 export default NotificationService;
