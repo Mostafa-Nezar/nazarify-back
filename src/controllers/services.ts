@@ -2,12 +2,12 @@ import { Request, Response } from "express";
 import Service from "../models/service";
 import "../models/offers";
 
-const activeOfferMatch = {
+const getActiveOfferMatch = () => ({
   isActive: true,
   startAt: { $lte: new Date() },
   endAt: { $gte: new Date() },
   $or: [{ usageLimit: { $exists: false } }, { $expr: { $lt: ["$usageCount", "$usageLimit"] } }],
-};
+});
 
 export const getServices = async (_req: Request, res: Response) => {
   try {
@@ -15,7 +15,7 @@ export const getServices = async (_req: Request, res: Response) => {
       .sort({ sortOrder: 1, createdAt: -1 })
       .populate({
         path: "offers",
-        match: activeOfferMatch,
+        match: getActiveOfferMatch(),
         options: { sort: { isFeatured: -1, sortOrder: 1, createdAt: -1 } },
       });
     return res.status(200).json({ services });
@@ -30,7 +30,7 @@ export const getService = async (req: Request, res: Response) => {
     const service = await Service.findOne({ _id: req.params.id, isActive: true })
       .populate({
         path: "offers",
-        match: activeOfferMatch,
+        match: getActiveOfferMatch(),
         options: { sort: { isFeatured: -1, sortOrder: 1, createdAt: -1 } },
       });
 
