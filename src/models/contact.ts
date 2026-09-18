@@ -11,6 +11,8 @@ export interface IContact extends Document {
   tiktok?: string;
   linkedin?: string;
   managerEmail: string;
+  workingHours?: string;
+  address?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,6 +29,8 @@ const contactSchema = new Schema<IContact>(
     phone: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, lowercase: true },
     managerEmail: { type: String, required: true, trim: true, lowercase: true },
+    workingHours: { type: String, trim: true },
+    address: { type: String, trim: true },
   },
   { timestamps: true, versionKey: false }
 );
