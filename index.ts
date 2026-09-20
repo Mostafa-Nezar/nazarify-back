@@ -25,6 +25,7 @@ import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
 import offers from "./src/routes/offers";
+import pages from "./src/routes/page";
 import NotificationService from "./src/utils/notificationService";
 
 const app = express();
@@ -57,6 +58,7 @@ app.use("/messages", messages);
 app.use("/privacy-policy", privacyPolicy);
 app.use("/terms-of-service", termsOfService);
 app.use("/offers", offers);
+app.use("/pages", pages);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 app.get("/", (req: Request, res: Response) => res.json({ message: "Nazarify API is running" }));

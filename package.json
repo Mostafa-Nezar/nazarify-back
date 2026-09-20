@@ -7,6 +7,7 @@
     "swagger": "tsx swagger.ts",
     "dev": "tsx watch index.ts",
     "build": "tsc",
+    "seed:pages": "tsx scripts/seed-pages.ts",
     "start": "node dist/index.js"
   },
   "keywords": [],
