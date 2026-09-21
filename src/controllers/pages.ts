@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
-import Page from "../models/page";
-import { withDefaultSeo } from "../utils/seo";
+import Page from "../models/pages";
 
 export const getPages = async (_req: Request, res: Response) => {
   try {
@@ -24,7 +23,15 @@ export const createPage = async (req: Request, res: Response) => {
       ...req.body,
       slug: normalizedSlug,
       ...(typeof req.body.path === "string" && req.body.path.trim() ? { path: req.body.path.trim() } : {}),
-      seo: withDefaultSeo(req.body.seo, { title, description: req.body.excerpt || content.slice(0, 300), path: `/pages/${normalizedSlug}` }),
+      seo: {
+        title,
+        description: req.body.excerpt || content.slice(0, 300),
+        keywords: req.body.keywords,
+        ogTitle: req.body.ogTitle,
+        ogDescription: req.body.ogDescription,
+        ogImage: req.body.ogImage,
+        robots: req.body.robots,
+      },
       createdBy: req.user!.sub,
     });
     return res.status(201).json({ message: "Page created successfully", page });

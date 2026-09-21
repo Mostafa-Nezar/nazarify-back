@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createPage, deletePage, getPages, updatePage } from "../controllers/page";
+import { createPage, deletePage, getPages, updatePage } from "../controllers/pages";
 import { protectAdmin } from "../middleware/admin";
 
 const router = Router();

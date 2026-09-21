@@ -1,7 +1,6 @@
 
 import { Request, Response } from "express";
 import About from "../models/about";
-import { withDefaultSeo } from "../utils/seo";
 
 const aboutSeoDefaults = {
   title: "About Nazarify",
@@ -20,15 +19,10 @@ export const getAbout = async (_req: Request, res: Response) => {
           description: "Tell your visitors about Nazarify.",
           faqs: [],
           whyNazarify: [],
-          seo: withDefaultSeo(undefined, aboutSeoDefaults),
         },
       },
       { returnDocument: "after", upsert: true, setDefaultsOnInsert: true }
     );
-    if (!about.seo?.metaTitle) {
-      about.seo = withDefaultSeo(about.seo, aboutSeoDefaults);
-      await about.save();
-    }
     return res.status(200).json({ about });
   } catch (error) {
     console.error("Get about error:", error);
@@ -38,10 +32,9 @@ export const getAbout = async (_req: Request, res: Response) => {
 
 export const updateAbout = async (req: Request, res: Response) => {
   try {
-    const existingAbout = await About.findOne();
     const about = await About.findOneAndUpdate(
       {},
-      { $set: { ...req.body, seo: withDefaultSeo(req.body.seo ?? existingAbout?.seo, aboutSeoDefaults) } },
+      { $set: { ...req.body } },
       { returnDocument: "after", upsert: true, runValidators: true }
     );
     return res.status(200).json({ about, message: "About updated successfully" });

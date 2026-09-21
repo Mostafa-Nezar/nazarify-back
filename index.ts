@@ -25,7 +25,7 @@ import swaggerUi from "swagger-ui-express";
 import fs from "fs";
 import path from "path";
 import offers from "./src/routes/offers";
-import pages from "./src/routes/page";
+import pages from "./src/routes/pages";
 import NotificationService from "./src/utils/notificationService";
 
 const app = express();

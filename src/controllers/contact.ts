@@ -1,22 +1,10 @@
 import { Request, Response } from "express";
 import Contact from "../models/contact";
-import { withDefaultSeo } from "../utils/seo";
-
-const contactSeoDefaults = {
-  title: "Contact Nazarify",
-  description: "Get in touch with Nazarify to discuss your next project.",
-  path: "/contact",
-  useFaviconImage: true,
-};
 
 export const getContact = async (_req: Request, res: Response) => {
   try {
     let contact = await Contact.findOne();
     if (!contact) return res.status(404).json({ message: "Contact information not found" });
-    if (!contact.seo?.metaTitle) {
-      contact.seo = withDefaultSeo(contact.seo, contactSeoDefaults);
-      await contact.save();
-    }
     return res.status(200).json({ contact });
   } catch (error) {
     console.error("Get contact error:", error);
@@ -26,10 +14,9 @@ export const getContact = async (_req: Request, res: Response) => {
 
 export const updateContact = async (req: Request, res: Response) => {
   try {
-    const existingContact = await Contact.findOne();
     const contact = await Contact.findOneAndUpdate(
       {},
-      { $set: { ...req.body, seo: withDefaultSeo(req.body.seo ?? existingContact?.seo, contactSeoDefaults) } },
+      { $set: { ...req.body } },
       { returnDocument: "after", upsert: true, runValidators: true }
     );
 
