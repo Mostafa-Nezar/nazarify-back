@@ -234,8 +234,8 @@ export const githubCallback = async (req: Request, res: Response) => {
     const token = createToken(user._id.toString());
     setcookie(res, token);
     if (state === "mobile") {
-      githubUser.id = githubUser.id.toString();
-      return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}&user=${encodeURIComponent(JSON.stringify(githubUser))}`);
+      const userData = JSON.stringify({_id: user._id, name: user.name, email: user.email, avatar: user.avatar, phone: user.phone });
+      return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}&user=${encodeURIComponent(userData)}`);
     }
     return redirectWithToken(res, token);
   } catch (error) {
