@@ -233,7 +233,7 @@ export const githubCallback = async (req: Request, res: Response) => {
     await populateNotifications(user);
     const token = createToken(user._id.toString());
     setcookie(res, token);
-    if (state === "mobile") return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}`);
+    if (state === "mobile") return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}&user=${encodeURIComponent(JSON.stringify(githubUser))}`);
     return redirectWithToken(res, token);
   } catch (error) {
     console.error("GitHub login error:", error);
