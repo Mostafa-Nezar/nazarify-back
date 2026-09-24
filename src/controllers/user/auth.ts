@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import User, { IUser } from "../../models/user";
 import NotificationService from "../../utils/notificationService";
-import { sendWelcomeEmail } from "../../utils/emailService";
 import { OAuth2Client } from "google-auth-library";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -36,7 +35,6 @@ export const register = async (req: Request, res: Response) => {
     if (await User.findOne({ email })) return res.status(409).json({ message: "Email already registered" });
     const user = await User.create({ name: name.trim(), email: email.toLowerCase(), password: await bcrypt.hash(password, 12), phone: phone?.trim() });
     await NotificationService.notifyWelcome(user._id.toString(), user.name);
-    await sendWelcomeEmail(user.email, user.name).catch((error) => console.error("Welcome email error:", error));
     await populateNotifications(user);
 
     const token = createToken(user._id.toString());
@@ -178,9 +176,12 @@ export const googleCallback = async (req: Request, res: Response) => {
 };
 
 export const githubLogin = async (_req: Request, res: Response) => {
+  const platform = _req.query.platform === "mobile" ? "mobile" : "web";
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID!,
-    redirect_uri: process.env.GITHUB_CALLBACK_URL!, scope: "read:user user:email",
+    redirect_uri: process.env.GITHUB_CALLBACK_URL!,
+    scope: "read:user user:email",
+    state: platform,
   });
 
   res.redirect(`https://github.com/login/oauth/authorize?${params}`);
@@ -188,7 +189,7 @@ export const githubLogin = async (_req: Request, res: Response) => {
 
 export const githubCallback = async (req: Request, res: Response) => {
   try {
-    const { code } = req.query;
+    const { code, state } = req.query;
     if (!code) return res.status(400).json({ message: "GitHub code is required" });
     const tokenResponse = await fetch("https://github.com/login/oauth/access_token",
       {
@@ -232,7 +233,7 @@ export const githubCallback = async (req: Request, res: Response) => {
     await populateNotifications(user);
     const token = createToken(user._id.toString());
     setcookie(res, token);
-
+    if (state === "mobile") return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}`);
     return redirectWithToken(res, token);
   } catch (error) {
     console.error("GitHub login error:", error);
