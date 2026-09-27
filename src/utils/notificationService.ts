@@ -1,7 +1,8 @@
 import Notification from "../models/notification";
 import User from "../models/user";
 import { Types } from "mongoose";
-
+import "../config/firebase";
+import { getMessaging } from "firebase-admin/messaging";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import type { Server as HttpServer } from "http";
 
@@ -20,10 +21,26 @@ class NotificationService {
   static setSocketIO(socketIO: SocketIOServer) { this.io = socketIO; }
   static getIO(): SocketIOServer | null { return this.io; }
 
+  static async sendPushNotification(title: string, message: string, type: string, icon?: string) {
+    const token = process.env.FCM_TOKEN;
+    if (!token) return;
+
+    try {
+      await getMessaging().send({
+        token,
+        notification: { title, body: message },
+        data: { type, ...(icon && { icon }) },
+      });
+    } catch (error) {
+      console.error("Error sending push notification:", error);
+    }
+  }
+
   static async createNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string = "system", recipientType: "user" | "admin" = "user", icon?: string) {
     try {
       const notification = new Notification({ recipient: recipientId, recipientType, type, title, message, ...(icon && { icon }) });
       await notification.save();
+      await this.sendPushNotification(title, message, type, icon);
 
       if (this.io) {
         this.io.to(`user_${recipientId.toString()}`).emit("newNotification", {

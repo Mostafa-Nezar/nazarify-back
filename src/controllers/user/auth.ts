@@ -5,6 +5,7 @@ import crypto from "crypto";
 import User, { IUser } from "../../models/user";
 import NotificationService from "../../utils/notificationService";
 import { OAuth2Client } from "google-auth-library";
+import { verifyRecaptcha } from "../../utils/recaptcha"
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET!;
@@ -30,6 +31,9 @@ const populateNotifications = async (user: IUser) => user.populate("notification
 
 export const register = async (req: Request, res: Response) => {
   try {
+    const captcha = await verifyRecaptcha(req.body.captchaToken);
+    if (!captcha.success || captcha.score < 0.5 || captcha.action !== "register") return res.status(400).json({ message: "Captcha verification failed" });
+  
     const { name, email, password, phone } = req.body;
     if (!name || !email || !password) { return res.status(400).json({ message: "All fields are required" }); }
     if (await User.findOne({ email })) return res.status(409).json({ message: "Email already registered" });
@@ -48,6 +52,9 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
+    const captcha = await verifyRecaptcha(req.body.captchaToken);
+    if (!captcha.success || captcha.score < 0.5 || captcha.action !== "login") return res.status(400).json({ message: "Captcha verification failed" });
+    
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
     const user = await User.findOne({ email: email.trim().toLowerCase() })
