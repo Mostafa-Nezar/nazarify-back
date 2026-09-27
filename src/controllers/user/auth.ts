@@ -11,12 +11,9 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET!;
 const createToken = (userId: string) => jwt.sign({ sub: userId, role: "user", jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: "7d" });
 const isProduction = process.env.NODE_ENV === "production";
-const cookieOptions = {
-  httpOnly: true,
-  secure: isProduction,
-  sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-};
+const cookieOptions = { httpOnly: true, secure: isProduction, sameSite: (isProduction ? "none" : "lax") as "none" | "lax", maxAge: 7 * 24 * 60 * 60 * 1000, };
+
+const populateNotifications = async (user: IUser) => user.populate("notifications");
 const setcookie = (res: Response, token: string) => res.cookie("token", token, cookieOptions);
 const clearcookie = (res: Response) => res.clearCookie("token", cookieOptions);
 
@@ -27,7 +24,7 @@ const redirectWithToken = (res: Response, token: string) => {
   const frontend = process.env.USER_FRONTEND_URL!;
   return res.redirect(`${frontend.replace(/\/$/, "")}#token=${encodeURIComponent(token)}`);
 };
-const populateNotifications = async (user: IUser) => user.populate("notifications");
+
 
 export const register = async (req: Request, res: Response) => {
   try {
