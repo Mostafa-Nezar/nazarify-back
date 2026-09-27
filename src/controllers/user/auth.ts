@@ -17,15 +17,6 @@ const populateNotifications = async (user: IUser) => user.populate("notification
 const setcookie = (res: Response, token: string) => res.cookie("token", token, cookieOptions);
 const clearcookie = (res: Response) => res.clearCookie("token", cookieOptions);
 
-// Firefox can block/partition the API cookie on the next frontend -> API
-// request. A fragment is not sent in HTTP requests or Referer headers, unlike
-// a query-string JWT, so the frontend can store it and then use Authorization.
-const redirectWithToken = (res: Response, token: string) => {
-  const frontend = process.env.USER_FRONTEND_URL!;
-  return res.redirect(`${frontend.replace(/\/$/, "")}#token=${encodeURIComponent(token)}`);
-};
-
-
 export const register = async (req: Request, res: Response) => {
   try {
     const captcha = await verifyRecaptcha(req.body.captchaToken);
@@ -173,7 +164,7 @@ export const googleCallback = async (req: Request, res: Response) => {
     await populateNotifications(user);
     const jwtToken = createToken(user._id.toString());
     setcookie(res, jwtToken);
-    return redirectWithToken(res, jwtToken);
+    return res.redirect(process.env.USER_FRONTEND_URL!);
   } catch (error) {
     return res.status(500).json({ message: "server error" });
   }
@@ -241,7 +232,7 @@ export const githubCallback = async (req: Request, res: Response) => {
       const userData = JSON.stringify({_id: user._id, name: user.name, email: user.email, avatar: user.avatar, phone: user.phone });
       return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}&user=${encodeURIComponent(userData)}`);
     }
-    return redirectWithToken(res, token);
+    return res.redirect(process.env.USER_FRONTEND_URL!);
   } catch (error) {
     console.error("GitHub login error:", error);
     return res.status(500).json({ message: "server error" });
