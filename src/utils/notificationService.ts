@@ -21,14 +21,16 @@ class NotificationService {
   static setSocketIO(socketIO: SocketIOServer) { this.io = socketIO; }
   static getIO(): SocketIOServer | null { return this.io; }
 
-  static async sendPushNotification(title: string, message: string, type: string, icon?: string) {
-    const token = process.env.FCM_TOKEN;
+  static async sendPushNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string, icon?: string) {
+    const user = await User.findById(recipientId).select("+fcmToken");
+    const token = user?.fcmToken;
     if (!token) return;
 
     try {
       await getMessaging().send({
         token,
         notification: { title, body: message },
+        android: { priority: "high", },
         data: { type, ...(icon && { icon }) },
       });
     } catch (error) {
@@ -40,7 +42,9 @@ class NotificationService {
     try {
       const notification = new Notification({ recipient: recipientId, recipientType, type, title, message, ...(icon && { icon }) });
       await notification.save();
-      await this.sendPushNotification(title, message, type, icon);
+      if (recipientType === "user") {
+        await this.sendPushNotification(recipientId, title, message, type, icon);
+      }
 
       if (this.io) {
         this.io.to(`user_${recipientId.toString()}`).emit("newNotification", {
