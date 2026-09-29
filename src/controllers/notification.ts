@@ -1,8 +1,6 @@
 import { Request, Response } from "express";
-import mongoose from "mongoose";
 import Notification from "../models/notification";
 import NotificationService from "../utils/notificationService";
-import User from "../models/user";
 
 export const getNotifications = async (req: Request, res: Response) => {
   try {
@@ -146,15 +144,9 @@ export const createNotification = async (req: Request, res: Response) => {
       const results = await NotificationService.notifyAllUsers(title, message, type, icon);
       return res.status(201).json({ message: "Notifications sent to all users successfully", count: results.length, });
     }
-    if (recipientType !== "user") return res.status(400).json({ message: "Recipient type must be user or all" });
     if (!recipient) return res.status(400).json({ message: "Recipient is required for user notification" });
-    if (!mongoose.isValidObjectId(recipient)) return res.status(400).json({ message: "Recipient must be a valid user id" });
-
-    const user = await User.findOne({ _id: recipient, isActive: true }).select("_id");
-    if (!user) return res.status(404).json({ message: "Active recipient user not found" });
-
-    const { notification, push } = await NotificationService.createNotification(user._id, title, message, type, "user", icon);
-    return res.status(201).json({ message: "Notification created successfully", notification, push });
+    const notification = await NotificationService.createNotification(recipient, title, message, type, "user", icon);
+    return res.status(201).json({ message: "Notification created successfully", notification });
   } catch (error: any) {
     console.error("Create notification error:", error);
     return res.status(500).json({ message: error.message || "Server error" });
