@@ -27,7 +27,10 @@ class NotificationService {
     if (!tokens || tokens.length === 0) return;
 
     try {
-      const response = await getMessaging().sendEachForMulticast({ tokens, notification: { title, body: message }, android: { priority: "high" }, data: { type, ...(icon && { icon }) } });
+      const response = await getMessaging().sendEachForMulticast({
+         tokens,
+          notification: { title, body: message },
+          android: { priority: "high", notification: {  sound: "default",  defaultSound: true,notificationCount: 1, }, data: { type, ...(icon && { icon }) } }});
       if (response.failureCount > 0) {
         const failedTokens: string[] = [];
         response.responses.forEach((resp, idx) => {
