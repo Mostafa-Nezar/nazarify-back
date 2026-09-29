@@ -22,10 +22,10 @@ export const register = async (req: Request, res: Response) => {
     const captcha = await verifyRecaptcha(req.body.captchaToken);
     if (!captcha.success || captcha.score < 0.5 || captcha.action !== "register") return res.status(400).json({ message: "Captcha verification failed" });
   
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, fcmToken } = req.body;
     if (!name || !email || !password) { return res.status(400).json({ message: "All fields are required" }); }
     if (await User.findOne({ email })) return res.status(409).json({ message: "Email already registered" });
-    const user = await User.create({ name: name.trim(), email: email.toLowerCase(), password: await bcrypt.hash(password, 12), phone: phone?.trim() });
+    const user = await User.create({ name: name.trim(), email: email.toLowerCase(), password: await bcrypt.hash(password, 12), phone: phone?.trim(), ...(fcmToken && { fcmTokens: [fcmToken] }) });
     await NotificationService.notifyWelcome(user._id.toString(), user.name);
     await populateNotifications(user);
 
@@ -43,15 +43,19 @@ export const login = async (req: Request, res: Response) => {
     const captcha = await verifyRecaptcha(req.body.captchaToken);
     if (!captcha.success || captcha.score < 0.5 || captcha.action !== "login") return res.status(400).json({ message: "Captcha verification failed" });
     
-    const { email, password } = req.body;
+    const { email, password, fcmToken } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
     const user = await User.findOne({ email: email.trim().toLowerCase() })
-      .select("+password")
+      .select("+password +fcmTokens")
       .populate("notifications");
     if (!user || !user.password) return res.status(401).json({ message: "Invalid email or password" });
     if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
     if (!(await bcrypt.compare(password, user.password))) return res.status(401).json({ message: "Invalid email or password" });
 
+    if (fcmToken && !user.fcmTokens?.includes(fcmToken)) {
+      user.fcmTokens = user.fcmTokens || [];
+      user.fcmTokens.push(fcmToken);
+    }
     user.lastLoginAt = new Date();
     await user.save();
 

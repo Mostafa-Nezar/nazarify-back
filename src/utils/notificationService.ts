@@ -22,17 +22,32 @@ class NotificationService {
   static getIO(): SocketIOServer | null { return this.io; }
 
   static async sendPushNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string, icon?: string) {
-    const user = await User.findById(recipientId).select("+fcmToken");
-    const token = user?.fcmToken;
-    if (!token) return;
+    const user = await User.findById(recipientId).select("+fcmTokens");
+    const tokens = user?.fcmTokens;
+    if (!tokens || tokens.length === 0) return;
 
     try {
-      await getMessaging().send({
-        token,
+      const response = await getMessaging().sendEachForMulticast({
+        tokens,
         notification: { title, body: message },
-        android: { priority: "high", },
+        android: { priority: "high" },
         data: { type, ...(icon && { icon }) },
       });
+
+      if (response.failureCount > 0) {
+        const failedTokens: string[] = [];
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            const errCode = resp.error?.code;
+            if (errCode === 'messaging/invalid-registration-token' || errCode === 'messaging/registration-token-not-registered') {
+              failedTokens.push(tokens[idx]);
+            }
+          }
+        });
+        if (failedTokens.length > 0) {
+          await User.findByIdAndUpdate(recipientId, { $pull: { fcmTokens: { $in: failedTokens } } });
+        }
+      }
     } catch (error) {
       console.error("Error sending push notification:", error);
     }
@@ -42,9 +57,7 @@ class NotificationService {
     try {
       const notification = new Notification({ recipient: recipientId, recipientType, type, title, message, ...(icon && { icon }) });
       await notification.save();
-      if (recipientType === "user") {
-        await this.sendPushNotification(recipientId, title, message, type, icon);
-      }
+      if (recipientType === "user") await this.sendPushNotification(recipientId, title, message, type, icon);
 
       if (this.io) {
         this.io.to(`user_${recipientId.toString()}`).emit("newNotification", {
@@ -68,13 +81,7 @@ class NotificationService {
       );
 
       if (this.io) {
-        this.io.emit("broadcastNotification", {
-          title,
-          message,
-          type,
-          icon,
-          createdAt: new Date(),
-        });
+        this.io.emit("broadcastNotification", { title, message, type, icon, createdAt: new Date(), });
       }
 
       return results;

@@ -6,7 +6,7 @@ export interface IUser extends Document {
   email: string;
   username: string;
   password?: string;
-  fcmToken?: string;
+  fcmTokens?: string[];
   avatar?: string;
   googleId?: string;
   githubId?: string;
@@ -27,7 +27,7 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     username: { type: String, unique: true, trim: true, minlength: 3, maxlength: 30 },
     password: { type: String, select: false },
-    fcmToken: { type: String, default: () => process.env.FCM_TOKEN, select: false },
+    fcmTokens: { type: [String], default: [], select: false },
     googleId: { type: String, unique: true, sparse: true, index: true },
     githubId: { type: String, unique: true, sparse: true, index: true },
     avatar: { type: String, trim: true },
