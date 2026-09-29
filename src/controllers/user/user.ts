@@ -69,14 +69,21 @@ export const deleteAccount = async (req: Request, res: Response) => {
 export const updateFcmToken = async (req: Request, res: Response) => {
   try {
     const { fcmToken } = req.body;
-    if (!fcmToken) return res.status(400).json({ message: "FCM token is required" });
+    if (typeof fcmToken !== "string" || !fcmToken.trim()) {
+      return res.status(400).json({ message: "FCM token is required" });
+    }
 
-    const user = await User.findById(req.user?.sub);
+    const user = await User.findByIdAndUpdate(
+      req.user!.sub,
+      { $addToSet: { fcmTokens: fcmToken.trim() } },
+      { returnDocument: "after" }
+    ).select("+fcmTokens");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    await User.findByIdAndUpdate(req.user?.sub, { $addToSet: { fcmTokens: fcmToken } });
-
-    return res.status(200).json({ message: "FCM token updated successfully" });
+    return res.status(200).json({
+      message: "FCM token updated successfully",
+      registeredDeviceCount: user.fcmTokens?.length ?? 0,
+    });
   } catch (error) {
     console.error("Update FCM token error:", error);
     return res.status(500).json({ message: "Server error" });

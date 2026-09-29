@@ -6,6 +6,13 @@ import { getMessaging } from "firebase-admin/messaging";
 import { Server as SocketIOServer, Socket } from "socket.io";
 import type { Server as HttpServer } from "http";
 
+export type PushDelivery = {
+  status: "sent" | "no_registered_tokens" | "failed";
+  registeredTokenCount: number;
+  successCount: number;
+  failureCount: number;
+};
+
 class NotificationService {
   static io: SocketIOServer | null = null;
   static init(server: HttpServer) {
@@ -21,26 +28,54 @@ class NotificationService {
   static setSocketIO(socketIO: SocketIOServer) { this.io = socketIO; }
   static getIO(): SocketIOServer | null { return this.io; }
 
-  static async sendPushNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string, icon?: string) {
+  static async sendPushNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string, icon?: string): Promise<PushDelivery> {
     const user = await User.findById(recipientId).select("+fcmTokens");
-    const tokens = user?.fcmTokens;
-    if (!tokens || tokens.length === 0) return;
+    const tokens = [...new Set(user?.fcmTokens?.filter(Boolean) ?? [])];
+    if (tokens.length === 0) {
+      console.warn("Push notification skipped: recipient has no registered FCM tokens", { recipientId: recipientId.toString() });
+      return { status: "no_registered_tokens", registeredTokenCount: 0, successCount: 0, failureCount: 0 };
+    }
 
     try {
-      const response = await getMessaging().sendEachForMulticast({ tokens, notification: { title, body: message }, android: { priority: "high" }, data: { type, ...(icon && { icon }) } });
-      if (response.failureCount > 0) {
-        const failedTokens: string[] = [];
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            const errCode = resp.error?.code;
-            if (errCode === 'messaging/invalid-registration-token' || errCode === 'messaging/registration-token-not-registered') failedTokens.push(tokens[idx]);
+      let successCount = 0;
+      let failureCount = 0;
+      const failedTokens: string[] = [];
+
+      // Firebase accepts at most 500 registration tokens per multicast call.
+      for (let index = 0; index < tokens.length; index += 500) {
+        const batch = tokens.slice(index, index + 500);
+        const response = await getMessaging().sendEachForMulticast({
+          tokens: batch,
+          notification: { title, body: message },
+          android: { priority: "high" },
+          data: { type, ...(icon && { icon }) },
+        });
+
+        successCount += response.successCount;
+        failureCount += response.failureCount;
+        response.responses.forEach((resp, responseIndex) => {
+          const errorCode = resp.error?.code;
+          if (
+            !resp.success &&
+            (errorCode === "messaging/invalid-registration-token" || errorCode === "messaging/registration-token-not-registered")
+          ) {
+            failedTokens.push(batch[responseIndex]);
           }
         });
-        if (failedTokens.length > 0) await User.findByIdAndUpdate(recipientId, { $pull: { fcmTokens: { $in: failedTokens } } });
-        
       }
+
+      if (failedTokens.length > 0) {
+        await User.findByIdAndUpdate(recipientId, { $pull: { fcmTokens: { $in: failedTokens } } });
+      }
+
+      if (failureCount > 0) {
+        console.warn("Some FCM deliveries failed", { recipientId: recipientId.toString(), successCount, failureCount });
+      }
+
+      return { status: successCount > 0 ? "sent" : "failed", registeredTokenCount: tokens.length, successCount, failureCount };
     } catch (error) {
       console.error("Error sending push notification:", error);
+      return { status: "failed", registeredTokenCount: tokens.length, successCount: 0, failureCount: tokens.length };
     }
   }
 
@@ -48,7 +83,9 @@ class NotificationService {
     try {
       const notification = new Notification({ recipient: recipientId, recipientType, type, title, message, ...(icon && { icon }) });
       await notification.save();
-      if (recipientType === "user") await this.sendPushNotification(recipientId, title, message, type, icon);
+      const push = recipientType === "user"
+        ? await this.sendPushNotification(recipientId, title, message, type, icon)
+        : undefined;
 
       if (this.io) {
         this.io.to(`user_${recipientId.toString()}`).emit("newNotification", {
@@ -57,7 +94,7 @@ class NotificationService {
         });
       }
 
-      return notification;
+      return { notification, push };
     } catch (error) {
       console.error("Error creating notification:", error);
       throw error;
