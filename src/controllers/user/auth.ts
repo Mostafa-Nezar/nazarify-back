@@ -52,11 +52,9 @@ export const login = async (req: Request, res: Response) => {
     if (!user.isActive) return res.status(403).json({ message: "Account is disabled" });
     if (!(await bcrypt.compare(password, user.password))) return res.status(401).json({ message: "Invalid email or password" });
 
-    if (fcmToken) {
-      if (!user.fcmTokens) user.fcmTokens = [];
-      if (!user.fcmTokens.includes(fcmToken)) {
-        user.fcmTokens = [...user.fcmTokens, fcmToken];
-      }
+    if (fcmToken && !user.fcmTokens?.includes(fcmToken)) {
+      user.fcmTokens = user.fcmTokens || [];
+      user.fcmTokens.push(fcmToken);
     }
     user.lastLoginAt = new Date();
     await user.save();
@@ -245,15 +243,7 @@ export const githubCallback = async (req: Request, res: Response) => {
   }
 };
 
-export const logout = async (req: Request, res: Response) => {
-  try {
-    const { fcmToken } = req.body;
-    if (fcmToken && req.user?.sub) {
-      await User.findByIdAndUpdate(req.user.sub, { $pull: { fcmTokens: fcmToken } });
-    }
-  } catch (error) {
-    console.error("Error removing FCM token on logout:", error);
-  }
+export const logout = async (_req: Request, res: Response) => {
   clearcookie(res);
   return res.status(200).json({ message: "Logout successful" });
 };

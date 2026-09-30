@@ -28,7 +28,7 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
     username: { type: String, unique: true, trim: true, minlength: 3, maxlength: 30 },
     password: { type: String, select: false },
-    fcmTokens: { type: [String], select: false, default: () => [] },
+    fcmTokens: { type: [String], default: [], select: false },
     googleId: { type: String, unique: true, sparse: true, index: true },
     githubId: { type: String, unique: true, sparse: true, index: true },
     avatar: { type: String, trim: true },

@@ -31,16 +31,20 @@ class NotificationService {
          tokens,
           notification: { title, body: message },
           android: { priority: "high", notification: {  sound: "default",  defaultSound: true,notificationCount: 1, }, data: { type, ...(icon && { icon }) } }});
+
       if (response.failureCount > 0) {
         const failedTokens: string[] = [];
         response.responses.forEach((resp, idx) => {
           if (!resp.success) {
             const errCode = resp.error?.code;
-            if (errCode === 'messaging/invalid-registration-token' || errCode === 'messaging/registration-token-not-registered') failedTokens.push(tokens[idx]);
+            if (errCode === 'messaging/invalid-registration-token' || errCode === 'messaging/registration-token-not-registered') {
+              failedTokens.push(tokens[idx]);
+            }
           }
         });
-        if (failedTokens.length > 0) await User.findByIdAndUpdate(recipientId, { $pull: { fcmTokens: { $in: failedTokens } } });
-        
+        if (failedTokens.length > 0) {
+          await User.findByIdAndUpdate(recipientId, { $pull: { fcmTokens: { $in: failedTokens } } });
+        }
       }
     } catch (error) {
       console.error("Error sending push notification:", error);
