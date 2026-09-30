@@ -10,6 +10,7 @@ export interface IUser extends Document {
   avatar?: string;
   googleId?: string;
   githubId?: string;
+  fcmTokens?: string[];
   phone?: string;
   bio?: string;
   role: "user";
@@ -32,6 +33,7 @@ const userSchema = new Schema<IUser>(
     githubId: { type: String, unique: true, sparse: true, index: true },
     avatar: { type: String, trim: true },
     phone: { type: String, trim: true, maxlength: 30 },
+    fcmTokens: { type: [String], select: false, default: () => [] },
     bio: { type: String, trim: true, maxlength: 500 },
     role: { type: String, enum: ["user"], default: "user", immutable: true },
     isActive: { type: Boolean, default: true, index: true },
