@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { getProfile, updateProfile, changePassword, deleteAccount, updateFcmToken } from "../../controllers/user/user";
+import { getProfile, updateProfile, changePassword, deleteAccount } from "../../controllers/user/user";
 import { protectUser } from "../../middleware/auth";
 import { storage } from "../../config/cloudinary";
 
@@ -13,6 +13,5 @@ router.get("/", getProfile);
 router.patch("/", upload.single("avatar"), updateProfile);
 router.patch("/password", changePassword);
 router.delete("/", deleteAccount);
-router.put("/fcm-token", updateFcmToken);
 
 export default router;
