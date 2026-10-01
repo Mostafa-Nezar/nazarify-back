@@ -19,10 +19,13 @@ const clearcookie = (res: Response) => res.clearCookie("token", cookieOptions);
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const captcha = await verifyRecaptcha(req.body.captchaToken);
-    if (!captcha.success || captcha.score < 0.5 || captcha.action !== "register") return res.status(400).json({ message: "Captcha verification failed" });
-  
-    const { name, email, password, phone } = req.body;
+    const { name, email, password, phone, captchaToken } = req.body;
+    if (captchaToken) {
+      const captcha = await verifyRecaptcha(captchaToken);
+      if (!captcha.success || captcha.score < 0.5 || captcha.action !== "register") {
+        return res.status(400).json({ message: "Captcha verification failed" });
+      }
+    }
     if (!name || !email || !password) { return res.status(400).json({ message: "All fields are required" }); }
     if (await User.findOne({ email })) return res.status(409).json({ message: "Email already registered" });
     const user = await User.create({ name: name.trim(), email: email.toLowerCase(), password: await bcrypt.hash(password, 12), phone: phone?.trim() });
@@ -40,10 +43,13 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const captcha = await verifyRecaptcha(req.body.captchaToken);
-    if (!captcha.success || captcha.score < 0.5 || captcha.action !== "login") return res.status(400).json({ message: "Captcha verification failed" });
-    
-    const { email, password } = req.body;
+    const { email, password, captchaToken } = req.body;
+    if (captchaToken) {
+      const captcha = await verifyRecaptcha(captchaToken);
+      if (!captcha.success || captcha.score < 0.5 || captcha.action !== "login") {
+        return res.status(400).json({ message: "Captcha verification failed" });
+      }
+    }
     if (!email || !password) return res.status(400).json({ message: "Email and password are required" });
     const user = await User.findOne({ email: email.trim().toLowerCase() })
       .select("+password")
@@ -229,7 +235,7 @@ export const githubCallback = async (req: Request, res: Response) => {
     const token = createToken(user._id.toString());
     setcookie(res, token);
     if (state === "mobile") {
-      const userData = JSON.stringify({_id: user._id, name: user.name, email: user.email, avatar: user.avatar, phone: user.phone });
+      const userData = JSON.stringify({ _id: user._id, name: user.name, email: user.email, avatar: user.avatar, phone: user.phone });
       return res.redirect(`nazarify://auth/github?token=${encodeURIComponent(token)}&user=${encodeURIComponent(userData)}`);
     }
     return res.redirect(process.env.USER_FRONTEND_URL!);
