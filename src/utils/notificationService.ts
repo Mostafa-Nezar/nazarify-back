@@ -21,20 +21,89 @@ class NotificationService {
   static setSocketIO(socketIO: SocketIOServer) { this.io = socketIO; }
   static getIO(): SocketIOServer | null { return this.io; }
 
-  static async sendPushNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string, icon?: string) {
-    const user = await User.findById(recipientId).select("+fcmTokens");
-    const tokens = user?.fcmTokens;
-    if (!tokens || tokens.length === 0) return;
+static async sendPushNotification(
+  recipientId: string | Types.ObjectId,
+  title: string,
+  message: string,
+  type: string,
+  icon?: string
+) {
+  console.log("========== FCM START ==========");
+  console.log("Recipient ID:", recipientId.toString());
+  console.log("Title:", title);
+  console.log("Message:", message);
+  console.log("Type:", type);
+  console.log("Icon:", icon);
 
-    try {
-      const messages = tokens.map((token) => ({ token, notification: { title, body: message, }, android: { priority: "high" as const, notification: { sound: "default", defaultSound: true, notificationCount: 1, }, data: { type, ...(icon && { icon }), }, }, }));
-      const response = await getMessaging().sendEach(messages);
-      console.log("FCM RESULT:", { successCount: response.successCount, failureCount: response.failureCount, responses: response.responses.map((r) => ({ success: r.success, code: r.error?.code, message: r.error?.message, })),
-        });
-    } catch (error) {
-      console.error("Error sending push notification:", error);
+  try {
+    console.log("1. Finding user...");
+
+    const user = await User.findById(recipientId).select("+fcmTokens");
+
+    console.log("2. User found:", !!user);
+    console.log("3. User ID:", user?._id?.toString());
+    console.log("4. FCM tokens:", user?.fcmTokens);
+    console.log("5. Token count:", user?.fcmTokens?.length ?? 0);
+
+    const tokens = user?.fcmTokens;
+
+    if (!tokens || tokens.length === 0) {
+      console.log("6. NO FCM TOKENS - STOP");
+      console.log("========== FCM END ==========");
+      return;
     }
+
+    console.log("6. Creating FCM messages...");
+
+    const messages = tokens.map((token) => ({
+      token,
+      notification: {
+        title,
+        body: message,
+      },
+      android: {
+        priority: "high" as const,
+        notification: {
+          sound: "default",
+          defaultSound: true,
+          notificationCount: 1,
+        },
+        data: {
+          type,
+          ...(icon && { icon }),
+        },
+      },
+    }));
+
+    console.log("7. Messages created");
+    console.log("8. Message count:", messages.length);
+
+    console.log("9. Sending to Firebase...");
+
+    const response = await getMessaging().sendEach(messages);
+
+    console.log("10. Firebase response received");
+
+    console.log("FCM RESULT:", {
+      successCount: response.successCount,
+      failureCount: response.failureCount,
+      responses: response.responses.map((r) => ({
+        success: r.success,
+        code: r.error?.code,
+        message: r.error?.message,
+      })),
+    });
+
+    console.log("========== FCM END ==========");
+  } catch (error: any) {
+    console.error("========== FCM ERROR ==========");
+    console.error("Error:", error);
+    console.error("Error message:", error?.message);
+    console.error("Error code:", error?.code);
+    console.error("Error stack:", error?.stack);
+    console.error("========== FCM END ==========");
   }
+}
 
   static async createNotification(recipientId: string | Types.ObjectId, title: string, message: string, type: string = "system", recipientType: "user" | "admin" = "user", icon?: string) {
     try {
