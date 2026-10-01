@@ -27,25 +27,10 @@ class NotificationService {
     if (!tokens || tokens.length === 0) return;
 
     try {
-      const response = await getMessaging().sendEachForMulticast({
-         tokens,
-          notification: { title, body: message },
-          android: { priority: "high", notification: {  sound: "default",  defaultSound: true,notificationCount: 1, }, data: { type, ...(icon && { icon }) } }});
-
-      if (response.failureCount > 0) {
-        const failedTokens: string[] = [];
-        response.responses.forEach((resp, idx) => {
-          if (!resp.success) {
-            const errCode = resp.error?.code;
-            if (errCode === 'messaging/invalid-registration-token' || errCode === 'messaging/registration-token-not-registered') {
-              failedTokens.push(tokens[idx]);
-            }
-          }
+      const messages = tokens.map((token) => ({ token, notification: { title, body: message, }, android: { priority: "high" as const, notification: { sound: "default", defaultSound: true, notificationCount: 1, }, data: { type, ...(icon && { icon }), }, }, }));
+      const response = await getMessaging().sendEach(messages);
+      console.log("FCM RESULT:", { successCount: response.successCount, failureCount: response.failureCount, responses: response.responses.map((r) => ({ success: r.success, code: r.error?.code, message: r.error?.message, })),
         });
-        if (failedTokens.length > 0) {
-          await User.findByIdAndUpdate(recipientId, { $pull: { fcmTokens: { $in: failedTokens } } });
-        }
-      }
     } catch (error) {
       console.error("Error sending push notification:", error);
     }
