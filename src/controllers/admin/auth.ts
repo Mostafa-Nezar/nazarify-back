@@ -7,7 +7,12 @@ import { OAuth2Client } from "google-auth-library";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const JWT_SECRET = process.env.JWT_SECRET!;
-const createToken = (adminId: string, role: string) => jwt.sign({ sub: adminId, role, jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: "1d" });
+const SUPER_ADMIN_EMAIL = "mn2@gmail.com";
+const applySuperAdmin = <T extends { email: string; role: string }>(admin: T) => {
+    if (admin.email === SUPER_ADMIN_EMAIL) admin.role = "super_admin";
+    return admin;
+};
+const createToken = (adminId: string) => jwt.sign({ sub: adminId, role: "admin", jti: crypto.randomUUID() }, JWT_SECRET, { expiresIn: "1d" });
 const setcookie = (res: Response, token: string) => {
     res.cookie("admin_token", token, {
         httpOnly: true,
@@ -24,9 +29,11 @@ export const register = async (req: Request, res: Response) => {
         const { name, email, password } = req.body;
         if (!name || !email || !password) { return res.status(400).json({ message: "All fields are required" }); }
         if (await Admin.findOne({ email })) return res.status(409).json({ message: "Email already registered" });
-        const admin = await Admin.create({ name: name.trim(), email, password: await bcrypt.hash(password, 12) });
+        const admin = await Admin.create({ name: name.trim(), email: email.trim().toLowerCase(), password: await bcrypt.hash(password, 12) });
+        applySuperAdmin(admin);
+        await admin.save();
 
-        const token = createToken(admin._id.toString(), admin.role);
+        const token = createToken(admin._id.toString());
         setcookie(res, token);
         res.setHeader("Authorization", `Bearer ${token}`);
         return res.status(201).json({ admin, token, message: "Registration successful" });
@@ -45,10 +52,11 @@ export const login = async (req: Request, res: Response) => {
         if (!admin.isActive) return res.status(403).json({ message: "Account is disabled" });
         if (!(await bcrypt.compare(password, admin.password))) return res.status(401).json({ message: "Invalid email or password" });
 
+        applySuperAdmin(admin);
         admin.lastLoginAt = new Date();
         await admin.save();
 
-        const token = createToken(admin._id.toString(), admin.role);
+        const token = createToken(admin._id.toString());
         setcookie(res, token);
         res.setHeader("Authorization", `Bearer ${token}`);
 
@@ -69,30 +77,18 @@ export const googlelogin = async (req: Request, res: Response) => {
         if (!payload?.email || !payload.sub) return res.status(400).json({ message: "Invalid Google token" });
 
         const email = payload.email.toLowerCase();
-        let admin = await Admin.findOne({ email });
-        if (!admin) admin = await Admin.findOne({ googleId: payload.sub });
+        const admin = await Admin.findOne({ email }) || await Admin.findOne({ googleId: payload.sub });
+        if (!admin) return res.status(403).json({ message: "Admin account not found" });
+        if (!admin.isActive) return res.status(403).json({ message: "Account is disabled" });
 
-        if (!admin) {
-            admin = new Admin({
-                name: payload.name || "Google Admin",
-                email,
-                googleId: payload.sub,
-                avatar: payload.picture,
-                isEmailVerified: true,
-                lastLoginAt: new Date(),
-            });
-        } else {
-            if (!admin.isActive) return res.status(403).json({ message: "Account is disabled" });
-
-            admin.googleId = payload.sub;
-            if (payload.picture) admin.avatar = payload.picture;
-            admin.isEmailVerified = true;
-            admin.lastLoginAt = new Date();
-        }
-
+        admin.googleId = payload.sub;
+        if (payload.picture) admin.avatar = payload.picture;
+        admin.isEmailVerified = true;
+        applySuperAdmin(admin);
+        admin.lastLoginAt = new Date();
         await admin.save();
 
-        const jwtToken = createToken(admin._id.toString(), admin.role);
+        const jwtToken = createToken(admin._id.toString());
         setcookie(res, jwtToken);
         res.setHeader("Authorization", `Bearer ${jwtToken}`);
         return res.status(200).json({ admin, token: jwtToken, message: "Google login successful" });
@@ -152,28 +148,18 @@ export const githubCallback = async (req: Request, res: Response) => {
         if (!email) return res.status(400).json({ message: "No verified GitHub email found" });
 
         const githubId = String(githubUser.id);
-        let admin = await Admin.findOne({ email: email.toLowerCase() });
-        if (!admin) admin = await Admin.findOne({ githubId });
-        if (!admin) {
-            admin = await Admin.create({
-                name: githubUser.name || githubUser.login,
-                email: email.toLowerCase(),
-                githubId,
-                avatar: githubUser.avatar_url,
-                isEmailVerified: true,
-                lastLoginAt: new Date(),
-            });
-        } else {
-            if (!admin.isActive) return res.status(403).json({ message: "Account is disabled" });
+        const admin = await Admin.findOne({ email: email.toLowerCase() }) || await Admin.findOne({ githubId });
+        if (!admin) return res.redirect(`${process.env.ADMIN_FRONTEND_URL}/login?error=${encodeURIComponent("Admin account not found")}`);
+        if (!admin.isActive) return res.redirect(`${process.env.ADMIN_FRONTEND_URL}/login?error=${encodeURIComponent("Account is disabled")}`);
 
-            admin.githubId = githubId;
-            admin.avatar = githubUser.avatar_url || admin.avatar;
-            admin.isEmailVerified = true;
-            admin.lastLoginAt = new Date();
-            await admin.save();
-        }
+        admin.githubId = githubId;
+        admin.avatar = githubUser.avatar_url || admin.avatar;
+        admin.isEmailVerified = true;
+        applySuperAdmin(admin);
+        admin.lastLoginAt = new Date();
+        await admin.save();
 
-        const jwtToken = createToken(admin._id.toString(), admin.role);
+        const jwtToken = createToken(admin._id.toString());
         setcookie(res, jwtToken);
         res.setHeader("Authorization", `Bearer ${jwtToken}`);
         return res.redirect(`${process.env.ADMIN_FRONTEND_URL}?token=${encodeURIComponent(jwtToken)}`);

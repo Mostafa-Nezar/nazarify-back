@@ -11,7 +11,8 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: async () => ({
     folder: "nazarify-backend",
-    allowed_formats: ["jpg", "png", "jpeg"],
+    resource_type: "auto",
+    allowed_formats: ["jpg", "png", "jpeg", "webp", "mp4", "webm", "mov"],
   }),
 });
 

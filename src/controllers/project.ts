@@ -68,6 +68,7 @@ export const createProject = async (req: Request, res: Response) => {
         const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
         const projectData: any = { ...req.body, slug: normalizedSlug, createdBy: req.user!.sub };
         if (files?.image?.[0]) projectData.image = files.image[0].path;
+        if (files?.video?.[0]) projectData.video = files.video[0].path;
         if (files?.gallery) projectData.gallery = files.gallery.map((file) => file.path);
 
         const project = await Project.create(projectData);
@@ -91,6 +92,7 @@ export const updateProject = async (req: Request, res: Response) => {
         const updateData: any = { ...req.body };
 
         if (files?.image?.[0]) updateData.image = files.image[0].path;
+        if (files?.video?.[0]) updateData.video = files.video[0].path;
 
         let existingGallery: string[] = [];
         if (req.body.gallery) {

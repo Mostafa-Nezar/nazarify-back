@@ -6,7 +6,7 @@ export interface IAdmin extends Document {
   password?: string;
   googleId?: string;
   githubId?: string;
-  role: "super_admin" | "admin";
+  role: "super_admin" | "master_admin" | "admin";
   permissions: string[];
   avatar?: string;
   isActive: boolean;
@@ -23,7 +23,7 @@ const adminSchema = new Schema<IAdmin>(
     password: { type: String, select: false },
     googleId: { type: String, unique: true, sparse: true, index: true },
     githubId: { type: String, unique: true, sparse: true, index: true },
-    role: { type: String, enum: ["super_admin", "admin"], default: "admin", index: true },
+    role: { type: String, enum: ["super_admin", "master_admin", "admin"], default: "admin", index: true },
     permissions: { type: [String], default: [] },
     avatar: { type: String, trim: true },
     isActive: { type: Boolean, default: true, index: true },

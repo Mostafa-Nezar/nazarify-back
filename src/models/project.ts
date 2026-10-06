@@ -6,7 +6,10 @@ export interface IProject extends Document {
   description: string;
   shortDescription?: string;
   image?: string;
+  imageDisplayType?: "desktop" | "mobile" | "logo";
+  video?: string;
   gallery: string[];
+  galleryDisplayType?: "desktop" | "mobile" | "logo";
   technologies: string[];
   category?: string;
   clientName?: string;
@@ -27,7 +30,10 @@ const projectSchema = new Schema<IProject>(
     description: { type: String, required: true, trim: true, maxlength: 10000 },
     shortDescription: { type: String, trim: true, maxlength: 300 },
     image: { type: String, trim: true },
+    imageDisplayType: { type: String, enum: ["desktop", "mobile", "logo"], default: "desktop" },
+    video: { type: String, trim: true },
     gallery: { type: [String], default: [] },
+    galleryDisplayType: { type: String, enum: ["desktop", "mobile", "logo"], default: "desktop" },
     technologies: { type: [String], default: [], index: true },
     category: { type: String, trim: true, index: true },
     clientName: { type: String, trim: true, maxlength: 150 },
