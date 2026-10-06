@@ -103,6 +103,7 @@ export const githubLogin = async (_req: Request, res: Response) => {
         client_id: process.env.GITHUB_CLIENT_ID!,
         redirect_uri: process.env.GITHUB_ADMIN_CALLBACK_URL!,
         scope: "read:user user:email",
+        state: "admin",
     });
 
     res.redirect(`https://github.com/login/oauth/authorize?${params}`);
@@ -120,6 +121,7 @@ export const githubCallback = async (req: Request, res: Response) => {
                 client_id: process.env.GITHUB_CLIENT_ID!,
                 client_secret: process.env.GITHUB_CLIENT_SECRET!,
                 code: code as string,
+                redirect_uri: process.env.GITHUB_ADMIN_CALLBACK_URL!,
             }),
         });
         const { access_token } = await tokenResponse.json();
