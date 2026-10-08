@@ -1,5 +1,4 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { ISEO, seoSchema } from "./seo";
 
 export interface IAbout extends Document {
   title: string;
@@ -7,7 +6,6 @@ export interface IAbout extends Document {
   image?: string;
   faqs: { question: string; answer: string }[];
   whyNazarify: { title: string; description: string; sortOrder: number }[];
-  seo?: ISEO;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,7 +37,6 @@ const aboutSchema = new Schema<IAbout>(
       ],
       default: [],
     },
-    seo: { type: seoSchema, default: () => ({}) },
   },
   { timestamps: true, versionKey: false }
 );

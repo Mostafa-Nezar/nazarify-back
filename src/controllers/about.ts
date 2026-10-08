@@ -2,13 +2,6 @@
 import { Request, Response } from "express";
 import About from "../models/about";
 
-const aboutSeoDefaults = {
-  title: "About Nazarify",
-  description: "Learn more about Nazarify and the team behind it.",
-  path: "/about",
-  useFaviconImage: true,
-};
-
 export const getAbout = async (_req: Request, res: Response) => {
   try {
     const about = await About.findOneAndUpdate(

@@ -1,5 +1,4 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { ISEO, seoSchema } from "./seo";
 
 export interface IContact extends Document {
   email: string;
@@ -14,7 +13,6 @@ export interface IContact extends Document {
   managerEmail: string;
   workingHours?: string;
   address?: string;
-  seo?: ISEO;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,7 +31,6 @@ const contactSchema = new Schema<IContact>(
     managerEmail: { type: String, required: true, trim: true, lowercase: true },
     workingHours: { type: String, trim: true },
     address: { type: String, trim: true },
-    seo: { type: seoSchema, default: () => ({}) },
   },
   { timestamps: true, versionKey: false }
 );

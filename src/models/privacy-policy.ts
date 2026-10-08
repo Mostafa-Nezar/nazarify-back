@@ -1,12 +1,10 @@
 import mongoose, { Document, Schema } from "mongoose";
-import { ISEO, seoSchema } from "./seo";
 
 export interface IPrivacyPolicy extends Document {
   title: string;
   content: string;
   sections: { title: string; content: string; sortOrder: number }[];
   lastUpdated: Date;
-  seo?: ISEO;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,7 +24,6 @@ const privacyPolicySchema = new Schema<IPrivacyPolicy>(
       default: [],
     },
     lastUpdated: { type: Date, default: Date.now },
-    seo: { type: seoSchema, default: () => ({}) },
   },
   { timestamps: true, versionKey: false }
 );
